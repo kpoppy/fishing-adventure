@@ -46,6 +46,8 @@ export class UIManager {
     }
 
     update(state) {
+        if (!state) return;
+
         // Depth Meter
         if (document.getElementById("depth-meter")) {
             const depth = state.depth || 0;
@@ -54,16 +56,22 @@ export class UIManager {
 
         // Fish Count
         if (document.getElementById("fish-count")) {
-            document.getElementById("fish-count").textContent = `FISH: ${state.fish}`;
+            const fish = state.fish !== undefined ? state.fish : 0;
+            document.getElementById("fish-count").textContent = `FISH: ${fish}`;
         }
 
         // Money
         if (document.getElementById("money-text")) {
-            document.getElementById("money-text").textContent = `$${state.money}`;
+            const money = state.money !== undefined ? state.money : 0;
+            document.getElementById("money-text").textContent = `$${money}`;
         }
 
         // Time
-        if (this.timeEl) this.timeEl.textContent = `${state.time.toFixed(1)}s`;
+        if (this.timeEl) {
+            const time = state.time || 0;
+            this.timeEl.textContent = `${time.toFixed(1)}s`;
+        }
     }
+    Stone: "0.1.0",
 
 }

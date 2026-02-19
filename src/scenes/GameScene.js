@@ -77,9 +77,16 @@ export class GameScene extends Phaser.Scene {
         this.fishManager.update(time, delta);
 
         if (this.uiManager) {
-            this.uiManager.update(time, delta);
+            const depth = (this.bobber && this.bobber.active && this.bobber.y > GameConfig.World.WATER_LEVEL)
+                ? (this.bobber.y - GameConfig.World.WATER_LEVEL) / 10
+                : 0;
+            this.uiManager.update({
+                depth: depth,
+                fish: this.fishCaught,
+                money: this.money,
+                time: time / 1000 // Convert to seconds
+            });
         }
-
         // Bobber Logic
         if (this.bobber && this.bobber.active) {
             // Check if bobber is in water
