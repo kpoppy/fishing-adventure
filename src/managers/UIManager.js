@@ -72,6 +72,4 @@ export class UIManager {
             this.timeEl.textContent = `${time.toFixed(1)}s`;
         }
     }
-    Stone: "0.1.0",
-
 }
