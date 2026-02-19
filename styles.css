@@ -1,0 +1,190 @@
+@import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;900&display=swap');
+
+:root {
+  --ink: #191919;
+  --paper: #f8efd3;
+  --red: #ff3333;
+  --green: #33ff77;
+  --gold: #ffcc00;
+  --blue: #3388ff;
+  --dark-overlay: rgba(0, 0, 0, 0.7);
+}
+
+* {
+  box-sizing: border-box;
+  user-select: none;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Noto Sans KR", sans-serif;
+  color: #fff;
+  background-color: #111;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.game-shell {
+  position: relative;
+  width: 960px;
+  max-width: 100%;
+}
+
+.hud-layer {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  right: 24px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 10;
+  text-shadow: 2px 2px 0 #000;
+}
+
+.hud-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat-bar {
+  position: relative;
+  width: 200px;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid #fff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.stat-fill {
+  height: 100%;
+  transition: width 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.fill-hp {
+  background: var(--red);
+  box-shadow: 0 0 10px var(--red);
+}
+
+.fill-ult {
+  background: var(--gold);
+  box-shadow: 0 0 10px var(--gold);
+}
+
+.stat-text {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.wave-info {
+  font-family: "Black Han Sans", sans-serif;
+  font-size: 32px;
+  color: var(--gold);
+  text-align: center;
+}
+
+.boss-hp-bar {
+  position: absolute;
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 30px;
+  background: #330000;
+  border: 2px solid #ff0000;
+  display: none;
+}
+
+#game-root {
+  width: 960px;
+  height: 540px;
+  border: 4px solid #333;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+}
+
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--dark-overlay);
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 20;
+  backdrop-filter: blur(5px);
+  animation: fadeIn 0.5s ease;
+}
+
+.modal-title {
+  font-family: "Black Han Sans", sans-serif;
+  font-size: 80px;
+  margin: 0;
+  background: linear-gradient(to bottom, #fff, #aaa);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.5));
+}
+
+.modal-desc {
+  font-size: 24px;
+  margin-top: 20px;
+  color: #ddd;
+}
+
+.modal-btn {
+  margin-top: 40px;
+  padding: 15px 40px;
+  font-size: 24px;
+  font-weight: 900;
+  color: #000;
+  background: var(--gold);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 0 20px var(--gold);
+  transition: transform 0.1s;
+}
+
+.modal-btn:hover {
+  transform: scale(1.05);
+  background: #fff;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.controls-hint {
+  position: absolute;
+  bottom: -40px;
+  width: 100%;
+  text-align: center;
+  color: #888;
+  font-size: 14px;
+}

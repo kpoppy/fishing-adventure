@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="88" viewBox="0 0 256 88">
+  <defs>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff6df"/>
+      <stop offset="1" stop-color="#f4d8a4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- frame 1 -->
+  <g transform="translate(0,0)">
+    <rect x="2" y="2" width="60" height="84" rx="8" fill="url(#card)" stroke="#181818" stroke-width="3"/>
+    <rect x="7" y="7" width="50" height="74" rx="6" fill="none" stroke="#cf2f2f" stroke-width="2"/>
+    <circle cx="32" cy="24" r="11" fill="#2f8a57"/>
+    <rect x="20" y="39" width="24" height="25" rx="6" fill="#1160bb"/>
+    <circle cx="28" cy="22" r="2" fill="#151515"/>
+    <circle cx="36" cy="22" r="2" fill="#151515"/>
+    <path d="M28 29 Q32 33 36 29" stroke="#151515" stroke-width="2" fill="none"/>
+  </g>
+
+  <!-- frame 2 -->
+  <g transform="translate(64,0)">
+    <rect x="2" y="2" width="60" height="84" rx="8" fill="url(#card)" stroke="#181818" stroke-width="3"/>
+    <rect x="7" y="7" width="50" height="74" rx="6" fill="none" stroke="#cf2f2f" stroke-width="2"/>
+    <circle cx="32" cy="24" r="11" fill="#2f8a57"/>
+    <rect x="20" y="38" width="24" height="26" rx="6" fill="#1160bb"/>
+    <circle cx="28" cy="22" r="2" fill="#151515"/>
+    <circle cx="36" cy="22" r="2" fill="#151515"/>
+    <path d="M28 29 Q32 32 36 29" stroke="#151515" stroke-width="2" fill="none"/>
+    <path d="M15 63 L21 57" stroke="#cf2f2f" stroke-width="3"/>
+    <path d="M49 63 L43 57" stroke="#cf2f2f" stroke-width="3"/>
+  </g>
+
+  <!-- frame 3 -->
+  <g transform="translate(128,0)">
+    <rect x="2" y="2" width="60" height="84" rx="8" fill="url(#card)" stroke="#181818" stroke-width="3"/>
+    <rect x="7" y="7" width="50" height="74" rx="6" fill="none" stroke="#cf2f2f" stroke-width="2"/>
+    <circle cx="32" cy="24" r="11" fill="#2f8a57"/>
+    <rect x="20" y="37" width="24" height="27" rx="6" fill="#1160bb"/>
+    <circle cx="28" cy="22" r="2" fill="#151515"/>
+    <circle cx="36" cy="22" r="2" fill="#151515"/>
+    <path d="M28 29 Q32 31 36 29" stroke="#151515" stroke-width="2" fill="none"/>
+    <path d="M14 61 L22 55" stroke="#2f8a57" stroke-width="3"/>
+    <path d="M50 61 L42 55" stroke="#2f8a57" stroke-width="3"/>
+  </g>
+
+  <!-- frame 4 -->
+  <g transform="translate(192,0)">
+    <rect x="2" y="2" width="60" height="84" rx="8" fill="url(#card)" stroke="#181818" stroke-width="3"/>
+    <rect x="7" y="7" width="50" height="74" rx="6" fill="none" stroke="#cf2f2f" stroke-width="2"/>
+    <circle cx="32" cy="24" r="11" fill="#2f8a57"/>
+    <rect x="20" y="35" width="24" height="29" rx="6" fill="#1160bb"/>
+    <circle cx="28" cy="22" r="2" fill="#151515"/>
+    <circle cx="36" cy="22" r="2" fill="#151515"/>
+    <path d="M28 29 Q32 34 36 29" stroke="#151515" stroke-width="2" fill="none"/>
+    <circle cx="32" cy="69" r="7" fill="#e5b54d" stroke="#151515" stroke-width="2"/>
+  </g>
+</svg>

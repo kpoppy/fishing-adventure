@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fishing Adventure - Cast & Chill</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #1a1a2e;
+      /* Dark Blue for Sea Night feel */
+      color: #e0e0e0;
+      font-family: 'Press Start 2P', cursive;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #game-container {
+      position: relative;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+      border: 4px solid #4a4e69;
+    }
+
+    #ui-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    .hud-top {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0 10px;
+    }
+
+    .hud-text {
+      font-size: 14px;
+      color: #fff;
+      text-shadow: 2px 2px 0 #000;
+      margin-bottom: 5px;
+    }
+
+    /* Fishing Specific HUD */
+    #depth-meter {
+      color: #4fc3f7;
+    }
+
+    #fish-count {
+      color: #ffd700;
+    }
+
+    /* Modal Styles */
+    #game-modal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      pointer-events: auto;
+    }
+  </style>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+  <main class="game-shell">
+    <div id="game-root"></div>
+
+    <!-- HUD Overlay -->
+    <div id="ui-layer">
+      <div class="hud-top">
+        <div id="left-hud">
+          <div id="depth-meter" class="hud-text">DEPTH: 0m</div>
+          <div id="fish-count" class="hud-text">FISH: 0</div>
+        </div>
+        <div id="right-hud">
+          <div id="time-text" class="hud-text">0.0s</div>
+          <div id="money-text" class="hud-text">$0</div>
+        </div>
+      </div>
+      <!-- Notifications / Floating Text handled by Canvas/EffectManager -->
+    </div>
+
+
+    <!-- Game Over / Shop Modal -->
+    <div id="game-modal">
+      <h1 id="modal-title">DAY COMPLETE</h1>
+      <p id="modal-desc">Total Catch: 0 | Earned: $0</p>
+      <div style="margin-top: 20px;">
+        <button class="modal-btn" onclick="window.game.scene.getScene('GameScene').scene.restart()">NEXT DAY</button>
+        <button class="modal-btn" onclick="location.reload()">MAIN MENU</button>
+      </div>
+    </div>
+    </div> class="controls-hint">
+    WASD/Arrows: Move • Space: Jump • K / Click: Fire • Q: Ult • E: Shield
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+  <script type="module" src="./src/main.js?v=3"></script>
+</body>
+
+</html>
