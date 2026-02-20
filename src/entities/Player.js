@@ -9,6 +9,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.setCollideWorldBounds(true);
         this.body.setSize(120, 160, true);
         this.body.setGravityY(GameConfig.Player.GRAVITY || 600);
+        this.body.setFriction(1, 1);
 
         this.facing = 1;
         this.play("hero-idle");

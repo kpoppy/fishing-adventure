@@ -1,5 +1,5 @@
 import { VIEW_W, VIEW_H } from "./constants.js";
-import { GameScene } from "./scenes/GameScene.js?v=31";
+import { GameScene } from "./scenes/GameScene.js?v=32";
 import { TitleScene } from "./scenes/TitleScene.js?v=4";
 
 const config = {

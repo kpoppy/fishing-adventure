@@ -11,6 +11,7 @@ export class UIManager {
         this.enemyEl = document.getElementById("enemy-text");
         this.bossHud = document.getElementById("boss-hud");
         this.bossFill = document.getElementById("boss-fill");
+        this.buoyancyEl = document.getElementById("buoyancy-text");
 
         this.hpBar = document.getElementById("hp-bar");
         this.hpText = document.getElementById("hp-text");
@@ -58,6 +59,16 @@ export class UIManager {
         if (document.getElementById("fish-count")) {
             const fish = state.fish !== undefined ? state.fish : 0;
             document.getElementById("fish-count").textContent = `FISH: ${fish}`;
+        }
+
+        // Buoyancy
+        if (this.buoyancyEl) {
+            if (state.buoyancy !== undefined) {
+                this.buoyancyEl.style.display = "block";
+                this.buoyancyEl.textContent = `BUOYANCY: ${state.buoyancy}`;
+            } else {
+                this.buoyancyEl.style.display = "none";
+            }
         }
 
         // Money

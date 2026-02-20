@@ -30,6 +30,8 @@ export class Bobber extends Phaser.Physics.Arcade.Sprite {
         const vy = Math.sin(angle) * this.castPower;
 
         this.setVelocity(vx, vy);
+        this.isAdjusting = false;
+        this.buoyancyK = 3; // Default buoyancy coefficient (lowered from 12)
     }
 
     update(time, delta) {
@@ -43,37 +45,59 @@ export class Bobber extends Phaser.Physics.Arcade.Sprite {
             this.floatLogic(time);
         } else {
             this.inWater = false;
+            this.body.setAccelerationY(0);
         }
     }
 
     enterWater() {
         this.inWater = true;
-        this.scene.soundManager.play("splash"); // Need to add splash sound
-        this.scene.effectManager.createSplash(this.x, GameConfig.World.WATER_LEVEL);
+
+        // Defensive check: ensure createSplash exists before calling
+        if (this.scene.effectManager && typeof this.scene.effectManager.createSplash === 'function') {
+            this.scene.effectManager.createSplash(this.x, GameConfig.World.WATER_LEVEL);
+        } else {
+            console.warn("EffectManager.createSplash is not available yet.");
+        }
 
         // Slow down significantly
         this.setVelocity(this.body.velocity.x * 0.2, this.body.velocity.y * 0.1);
+        this.body.setGravityY(200); // Reduced gravity underwater
     }
 
     floatLogic(time) {
-        // Buoyancy: Bob up and down around surface
-        // Simple harmonic motion + damping
+        if (this.isAdjusting) {
+            this.body.setAccelerationY(0);
+            this.body.setGravityY(0);
+            this.setAngle(0);
+            return;
+        }
 
-        // If deep, push up hard
+        // Restore underwater gravity
+        this.body.setGravityY(GameConfig.World.GRAVITY);
         const depth = this.y - GameConfig.World.WATER_LEVEL;
-        const buoyancyForce = -depth * 2;
+        const targetDepth = 25; // Target depth to float at (2.5m)
 
-        // Drag
-        this.body.velocity.y *= 0.95;
-        this.body.velocity.x *= 0.95;
+        if (depth > 0) {
+            // Buoyancy: Neutralize gravity (500) and add spring force relative to target depth
+            // We use (depth - targetDepth) to make it settle at 'targetDepth' instead of 0
+            const buoyancyForce = -GameConfig.World.GRAVITY - ((depth - targetDepth) * this.buoyancyK);
+            this.body.setAccelerationY(buoyancyForce);
 
-        // Wave motion
-        const wave = Math.sin(time * 0.003) * 0.5;
+            // Active Damping: Prevent momentum from carrying it too deep
+            // Increased damping near target depth for stability
+            const dampingFactor = depth < targetDepth + 20 ? 0.85 : 0.92;
+            this.body.velocity.y *= dampingFactor;
+            this.body.velocity.x *= 0.95;
 
-        // Apply forces (manually since Arcade Physics is limited)
-        // Actually, just managing velocity directly for "floating" feel is easier in Arcade
-        if (Math.abs(this.body.velocity.y) < 20 && Math.abs(depth) < 10) {
-            this.body.setVelocityY(Math.sin(time * 0.005) * 8);
+            // Surface bobbing (refined)
+            if (depth < targetDepth + 15 && depth > targetDepth - 10) {
+                // Gentle bobbing around the target depth
+                if (Math.abs(this.body.velocity.y) < 15) {
+                    this.body.setVelocityY(this.body.velocity.y + Math.sin(time * 0.005) * 3);
+                }
+            }
+        } else {
+            this.body.setAccelerationY(0);
         }
     }
 }

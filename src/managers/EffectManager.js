@@ -147,4 +147,20 @@ export class EffectManager {
             }
         });
     }
+
+    createSplash(x, y) {
+        // Simple water splash effect using expanding circles
+        for (let i = 0; i < 3; i++) {
+            const circle = this.scene.add.circle(x, y, 2, 0xffffff, 0.6);
+            circle.setDepth(100);
+            this.scene.tweens.add({
+                targets: circle,
+                radius: 12 + (i * 8),
+                alpha: 0,
+                duration: 300 + (i * 100),
+                ease: "Cubic.out",
+                onComplete: () => circle.destroy()
+            });
+        }
+    }
 }
