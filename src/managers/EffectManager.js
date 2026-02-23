@@ -9,15 +9,31 @@ export class EffectManager {
         if (!this.scene.anims.exists("hero-idle")) {
             this.scene.anims.create({
                 key: "hero-idle",
-                frames: this.scene.anims.generateFrameNumbers("atlas", { start: 0, end: 0 }),
-                frameRate: 4,
+                frames: [{ key: "player_sprite", frame: 0 }],
+                frameRate: 1,
+                repeat: -1
+            });
+        }
+        if (!this.scene.anims.exists("hero-charge")) {
+            this.scene.anims.create({
+                key: "hero-charge",
+                frames: [{ key: "player_sprite", frame: 1 }],
+                frameRate: 1,
+                repeat: -1
+            });
+        }
+        if (!this.scene.anims.exists("hero-cast")) {
+            this.scene.anims.create({
+                key: "hero-cast",
+                frames: [{ key: "player_sprite", frame: 2 }],
+                frameRate: 1,
                 repeat: -1
             });
         }
         if (!this.scene.anims.exists("hero-run")) {
             this.scene.anims.create({
                 key: "hero-run",
-                frames: this.scene.anims.generateFrameNumbers("atlas", { start: 0, end: 0 }), // Placeholder
+                frames: [{ key: "player_sprite" }], // Placeholder
                 frameRate: 10,
                 repeat: -1
             });
@@ -25,7 +41,7 @@ export class EffectManager {
         if (!this.scene.anims.exists("hero-jump")) {
             this.scene.anims.create({
                 key: "hero-jump",
-                frames: [{ key: "atlas", frame: 0 }],
+                frames: [{ key: "player_sprite" }],
                 frameRate: 1,
                 repeat: -1
             });

@@ -22,5 +22,6 @@ export const DEPTH = {
     BG_DECO: -19,
     PLATFORM: -10,
     CHAR: 0,
+    OBJ: 10,
     UI: 100
 };

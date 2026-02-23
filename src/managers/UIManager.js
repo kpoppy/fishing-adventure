@@ -12,6 +12,8 @@ export class UIManager {
         this.bossHud = document.getElementById("boss-hud");
         this.bossFill = document.getElementById("boss-fill");
         this.buoyancyEl = document.getElementById("buoyancy-text");
+        this.weightEl = document.getElementById("weight-text");
+        this.returnSpeedEl = document.getElementById("return-speed-text");
 
         this.hpBar = document.getElementById("hp-bar");
         this.hpText = document.getElementById("hp-text");
@@ -25,6 +27,13 @@ export class UIManager {
         this.modal = document.getElementById("game-modal");
         this.modalTitle = document.getElementById("modal-title");
         this.modalDesc = document.getElementById("modal-desc");
+        this.uiLayer = document.getElementById("ui-layer");
+    }
+
+    setHUDVisible(visible) {
+        if (this.uiLayer) {
+            this.uiLayer.style.display = visible ? "flex" : "none";
+        }
     }
 
     hideModal() {
@@ -68,6 +77,26 @@ export class UIManager {
                 this.buoyancyEl.textContent = `BUOYANCY: ${state.buoyancy}`;
             } else {
                 this.buoyancyEl.style.display = "none";
+            }
+        }
+
+        // Weight
+        if (this.weightEl) {
+            if (state.weight !== undefined) {
+                this.weightEl.style.display = "block";
+                this.weightEl.textContent = `WEIGHT: ${state.weight}`;
+            } else {
+                this.weightEl.style.display = "none";
+            }
+        }
+
+        // Return Speed
+        if (this.returnSpeedEl) {
+            if (state.returnSpeed !== undefined) {
+                this.returnSpeedEl.style.display = "block";
+                this.returnSpeedEl.textContent = `RETURN SPD: ${state.returnSpeed.toFixed(2)}`;
+            } else {
+                this.returnSpeedEl.style.display = "none";
             }
         }
 

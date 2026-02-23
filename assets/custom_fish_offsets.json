@@ -1,0 +1,11 @@
+{
+  "frameWidth": 48,
+  "frameHeight": 48,
+  "frames": 1,
+  "rodOffsets": [
+    {
+      "x": -17,
+      "y": 2
+    }
+  ]
+}

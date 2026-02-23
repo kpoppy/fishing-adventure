@@ -3,7 +3,7 @@ import { VIEW_W, VIEW_H, DEPTH, COLORS } from "../constants.js";
 export class TitleScene extends Phaser.Scene {
     constructor() {
         super("TitleScene");
-        this.menuItems = ["NEW GAME", "LOAD GAME", "RANKING", "OPTION", "EXIT"];
+        this.menuItems = ["NEW GAME", "LOAD GAME", "OPTION", "EXIT"]; // Removed dev tools from main array
         this.selectedItemIndex = 0;
         this.isMenuVisible = false;
     }
@@ -17,22 +17,29 @@ export class TitleScene extends Phaser.Scene {
         this.bg = this.add.tileSprite(VIEW_W / 2, VIEW_H / 2, VIEW_W, VIEW_H, "background");
         this.bg.setTint(0x555555);
 
-        // Logo
-        // Logo (now text)
-        this.logo = this.add.text(VIEW_W / 2, VIEW_H / 2 - 100, "FISHING\nADVENTURE", {
-            fontFamily: "Press Start 2P",
-            fontSize: "60px",
-            color: "#ffffff",
+        // Logo (now text, but much bigger and stylish)
+        this.logo = this.add.text(VIEW_W / 2, 160, "FISHING\nADVENTURE", {
+            fontFamily: "Impact, Arial Black, sans-serif",
+            fontSize: "76px",
+            fontStyle: "bold",
+            color: "#ffcc00", // Bright yellow/gold
             align: "center",
-            stroke: "#000000",
-            strokeThickness: 8
+            stroke: "#330000",
+            strokeThickness: 12,
+            shadow: {
+                offsetX: 6,
+                offsetY: 6,
+                color: '#000000',
+                blur: 0,
+                fill: true
+            }
         }).setOrigin(0.5);
 
         // Bobbing Animation
         this.tweens.add({
             targets: this.logo,
-            y: this.logo.y - 10, // Adjusted for new text position
-            duration: 1500, // Adjusted duration
+            y: 145, // Bob gracefully between 160 and 145
+            duration: 1500,
             yoyo: true,
             repeat: -1,
             ease: 'Sine.easeInOut'
@@ -40,7 +47,7 @@ export class TitleScene extends Phaser.Scene {
 
         // "CLICK TO START" Text
         this.pressText = this.add.text(VIEW_W / 2, VIEW_H - 120, "PLEASE CLICK OR PRESS SPACE", {
-            fontFamily: "Arial", fontSize: "24px", color: "#ffffff"
+            fontFamily: "Arial", fontSize: "30px", fontStyle: "bold", color: "#ffffff"
         }).setOrigin(0.5);
 
         this.tweens.add({
@@ -61,6 +68,16 @@ export class TitleScene extends Phaser.Scene {
         this.input.keyboard.on("keydown-Enter", () => this.selectMenu());
         this.input.keyboard.on("keydown-UP", () => this.navigateMenu(-1));
         this.input.keyboard.on("keydown-DOWN", () => this.navigateMenu(1));
+
+        // Toggle Dev Tools
+        this.input.keyboard.on("keydown-D", () => {
+            this.devToolsVisible = !this.devToolsVisible;
+            if (this.devToolsGroup) {
+                this.devToolsGroup.forEach(item => {
+                    item.setVisible(this.devToolsVisible);
+                });
+            }
+        });
     }
 
     showMenu() {
@@ -68,24 +85,16 @@ export class TitleScene extends Phaser.Scene {
         this.isMenuVisible = true;
         this.pressText.setVisible(false);
 
-        // Shift Logo Up
-        this.tweens.add({
-            targets: this.logo,
-            y: 120,
-            duration: 500,
-            ease: 'Power2'
-        });
-
         // Create Menu Buttons
-        let startY = 240;
-        const spacing = 50;
+        let startY = 330;
+        const spacing = 38;
 
         this.menuButtons = [];
 
         this.menuItems.forEach((item, index) => {
             const btn = this.add.text(VIEW_W / 2, startY + (index * spacing), item, {
                 fontFamily: "Arial",
-                fontSize: "32px",
+                fontSize: "24px", // Reduced from 32px
                 fontStyle: "bold",
                 color: index === 0 ? "#ffff00" : "#ffffff",
                 stroke: "#000000",
@@ -101,6 +110,22 @@ export class TitleScene extends Phaser.Scene {
 
             this.menuContainer.add(btn);
             this.menuButtons.push(btn);
+        });
+
+        // Add Dev Tools to bottom right
+        const toolStyle = {
+            fontFamily: "Arial", fontSize: "16px", color: "#aaaaaa", fontStyle: "bold"
+        };
+
+        const studioBtn = this.add.text(VIEW_W - 20, VIEW_H - 20, "STUDIO (EDITOR)", toolStyle)
+            .setOrigin(1, 1).setInteractive({ useHandCursor: true });
+
+        this.devToolsGroup = [studioBtn];
+        this.devToolsGroup.forEach(btn => {
+            btn.on("pointerover", () => btn.setColor("#ffffff"));
+            btn.on("pointerout", () => btn.setColor("#aaaaaa"));
+            btn.on("pointerdown", () => this.handleMenuAction("STUDIO"));
+            btn.setVisible(this.devToolsVisible);
         });
 
         this.menuContainer.setVisible(true);
@@ -123,9 +148,22 @@ export class TitleScene extends Phaser.Scene {
     updateSelection(index) {
         this.selectedItemIndex = index;
         this.menuButtons.forEach((btn, i) => {
+            // 기존 테두리나 알파값 트윈 애니메이션을 멈추고 초기화
+            this.tweens.killTweensOf(btn);
+            btn.alpha = 1;
+
             if (i === index) {
                 btn.setColor("#ffff00");
                 btn.setScale(1.1);
+
+                // 선택된 아이템에 깜빡임(Blink) 효과 추가
+                this.tweens.add({
+                    targets: btn,
+                    alpha: 0.3,
+                    duration: 400,
+                    yoyo: true,
+                    repeat: -1
+                });
             } else {
                 btn.setColor("#ffffff");
                 btn.setScale(1.0);
@@ -151,10 +189,11 @@ export class TitleScene extends Phaser.Scene {
                 this.showToast("NO SAVE FILE FOUND");
             }
         }
-        else if (action === "RANKING") {
-            const best = localStorage.getItem("godori-best-sec");
-            const msg = best ? `FASTEST CLEAR: ${best}s` : "NO RECORD YET";
-            this.showToast(msg);
+        else if (action === "STUDIO" || action === "CHARACTER EDITOR") {
+            this.cameras.main.fade(500, 0, 0, 0);
+            this.time.delayedCall(500, () => {
+                this.scene.start("CharacterEditorScene");
+            });
         }
         else if (action === "OPTION") {
             const isMuted = localStorage.getItem("gostop_mute") === "true";

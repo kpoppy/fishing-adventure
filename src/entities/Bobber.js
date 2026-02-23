@@ -2,10 +2,10 @@ import { GameConfig } from "../config/GameConfig.js";
 
 export class Bobber extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, power) {
-        super(scene, x, y, "atlas", 0);
+        super(scene, x, y, "bobber_sprite");
         this.scene = scene;
-        this.setDisplaySize(16, 16);
-        this.setTint(0xff4444); // High visibility red
+        this.setDisplaySize(32, 32); // Slightly larger than typical hook for pixel art visibility
+        // Removed setTint to preserve full pixel art color
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
@@ -31,7 +31,10 @@ export class Bobber extends Phaser.Physics.Arcade.Sprite {
 
         this.setVelocity(vx, vy);
         this.isAdjusting = false;
-        this.buoyancyK = 3; // Default buoyancy coefficient (lowered from 12)
+        this.buoyancyK = 1.5; // Default buoyancy coefficient (changed to 1.5 per user request)
+        this.sinkWeight = 1; // Adjusted to user request (1x multiplier)
+        this.returnSpeed = 1.1; // Fast return speed when off-screen
+        this.hookedFish = null; // Explicitly initialize
     }
 
     update(time, delta) {
@@ -78,20 +81,23 @@ export class Bobber extends Phaser.Physics.Arcade.Sprite {
         const targetDepth = 25; // Target depth to float at (2.5m)
 
         if (depth > 0) {
-            // Buoyancy: Neutralize gravity (500) and add spring force relative to target depth
-            // We use (depth - targetDepth) to make it settle at 'targetDepth' instead of 0
-            const buoyancyForce = -GameConfig.World.GRAVITY - ((depth - targetDepth) * this.buoyancyK);
-            this.body.setAccelerationY(buoyancyForce);
+            // Buoyancy VS Weight
+            // Default gravity is 500. We want the bobber to sink MUCH faster as requested.
+            // We apply a downward force based on the new sinkWeight parameter. 
+            // 4x heavier means we apply 4x gravity downwards.
+            const weightForce = GameConfig.World.GRAVITY * this.sinkWeight;
 
-            // Active Damping: Prevent momentum from carrying it too deep
-            // Increased damping near target depth for stability
-            const dampingFactor = depth < targetDepth + 20 ? 0.85 : 0.92;
-            this.body.velocity.y *= dampingFactor;
+            // The net force: buoyancy tries to lift it, weight pulls it down.
+            const buoyancyForce = -GameConfig.World.GRAVITY - ((depth - targetDepth) * this.buoyancyK);
+
+            this.body.setAccelerationY(buoyancyForce + weightForce);
+
+            // Active Damping: Prevent momentum from carrying it too crazy
+            this.body.velocity.y *= 0.95;
             this.body.velocity.x *= 0.95;
 
-            // Surface bobbing (refined)
-            if (depth < targetDepth + 15 && depth > targetDepth - 10) {
-                // Gentle bobbing around the target depth
+            // Surface bobbing only if buoyancy is enough to actually float it near target
+            if (this.buoyancyK > 0 && depth < targetDepth + 15 && depth > targetDepth - 10) {
                 if (Math.abs(this.body.velocity.y) < 15) {
                     this.body.setVelocityY(this.body.velocity.y + Math.sin(time * 0.005) * 3);
                 }

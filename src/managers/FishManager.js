@@ -11,21 +11,24 @@ export class FishManager {
         });
 
         this.spawnTimer = 0;
-        this.maxFish = 10;
+        this.maxFish = 30; // Increased for testing (originally 10)
 
-        // Debug spawn one immediately
-        this.spawnRandomFish();
+        // Debug spawn multiple immediately for rich testing
+        for (let i = 0; i < 15; i++) {
+            this.spawnRandomFish(true);
+        }
     }
 
     update(time, delta) {
         this.spawnTimer += delta;
-        if (this.spawnTimer > 2000 && this.fishes.countActive() < this.maxFish) {
+        // Faster spawn rate for testing (every ~0.8 sec + random)
+        if (this.spawnTimer > 800 + Math.random() * 500 && this.fishes.countActive() < this.maxFish) {
             this.spawnRandomFish();
             this.spawnTimer = 0;
         }
     }
 
-    spawnRandomFish() {
+    spawnRandomFish(isInitial = false) {
         // Randomly choose type based on probability (simple random for now)
         const types = Object.keys(GameConfig.Fish);
         const typeKey = types[Math.floor(Math.random() * types.length)];
@@ -39,19 +42,27 @@ export class FishManager {
         // Random Y in range
         const y = GameConfig.World.WATER_LEVEL + depthMin + Math.random() * (depthMax - depthMin);
 
-        // Random X (left or right side)
-        const x = Math.random() > 0.5 ? -50 : VIEW_W + 50;
+        // Random X (left or right side usually, but if initial, spawn near screen view)
+        let x;
+        if (isInitial) {
+            // Spawn broadly across the typical visible camera width range (e.g. 0 ~ 1200)
+            x = Math.random() * 1200;
+        } else {
+            // Spawn standard outside of typical single view width
+            x = Math.random() > 0.5 ? -100 : VIEW_W + 100;
+        }
 
         const fish = new Fish(this.scene, x, y, typeKey);
         this.fishes.add(fish);
 
         // Ensure they swim towards center initially
         if (x < 0) {
-            fish.direction = 1;
+            fish.direction = 1; // Moving Right
+            fish.setFlipX(true);
         } else {
-            fish.direction = -1;
+            fish.direction = -1; // Moving Left
+            fish.setFlipX(false);
         }
         fish.setVelocityX(fish.moveSpeed * fish.direction);
-        fish.setFlipX(fish.direction < 0);
     }
 }
