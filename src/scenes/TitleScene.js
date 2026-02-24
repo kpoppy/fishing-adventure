@@ -9,13 +9,14 @@ export class TitleScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image("background", "assets/background.png?v=2");
+        this.load.image("title_background", "assets/1000008044.png");
     }
 
     create() {
-        // Background
-        this.bg = this.add.tileSprite(VIEW_W / 2, VIEW_H / 2, VIEW_W, VIEW_H, "background");
-        this.bg.setTint(0x555555);
+        // Background - Changed to regular image for menu art
+        this.bg = this.add.image(VIEW_W / 2, VIEW_H / 2, "title_background");
+        this.bg.setDisplaySize(VIEW_W, VIEW_H);
+        // Removed setTint(0x555555) to show full vibrant colors of the new art
 
         // Logo (now text, but much bigger and stylish)
         this.logo = this.add.text(VIEW_W / 2, 160, "FISHING\nADVENTURE", {

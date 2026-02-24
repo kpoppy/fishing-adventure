@@ -16,7 +16,7 @@ export const GameConfig = {
         GRAVITY: 500,
         WATER_LEVEL: 350, // Y coordinate where water starts
         SKY_COLOR: 0x220000, // Dark red base
-        WATER_COLOR: 0x8B0000 // Dark red/brown toxic water
+        WATER_COLOR: 0x2b0000 // Very dark red/brown toxic water
     },
     Fish: {
         GOLDFISH: { hp: 10, price: 10, depth: [0, 300], speed: 40, color: 0xFFD700 },

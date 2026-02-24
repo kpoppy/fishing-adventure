@@ -34,6 +34,7 @@ export class Bobber extends Phaser.Physics.Arcade.Sprite {
         this.buoyancyK = 1.5; // Default buoyancy coefficient (changed to 1.5 per user request)
         this.sinkWeight = 1; // Adjusted to user request (1x multiplier)
         this.returnSpeed = 1.1; // Fast return speed when off-screen
+        this.targetDepth = 25; // Dynamic buoyancy target depth
         this.hookedFish = null; // Explicitly initialize
     }
 
@@ -78,7 +79,6 @@ export class Bobber extends Phaser.Physics.Arcade.Sprite {
         // Restore underwater gravity
         this.body.setGravityY(GameConfig.World.GRAVITY);
         const depth = this.y - GameConfig.World.WATER_LEVEL;
-        const targetDepth = 25; // Target depth to float at (2.5m)
 
         if (depth > 0) {
             // Buoyancy VS Weight
@@ -88,7 +88,7 @@ export class Bobber extends Phaser.Physics.Arcade.Sprite {
             const weightForce = GameConfig.World.GRAVITY * this.sinkWeight;
 
             // The net force: buoyancy tries to lift it, weight pulls it down.
-            const buoyancyForce = -GameConfig.World.GRAVITY - ((depth - targetDepth) * this.buoyancyK);
+            const buoyancyForce = -GameConfig.World.GRAVITY - ((depth - this.targetDepth) * this.buoyancyK);
 
             this.body.setAccelerationY(buoyancyForce + weightForce);
 
@@ -97,7 +97,7 @@ export class Bobber extends Phaser.Physics.Arcade.Sprite {
             this.body.velocity.x *= 0.95;
 
             // Surface bobbing only if buoyancy is enough to actually float it near target
-            if (this.buoyancyK > 0 && depth < targetDepth + 15 && depth > targetDepth - 10) {
+            if (this.buoyancyK > 0 && depth < this.targetDepth + 15 && depth > this.targetDepth - 10) {
                 if (Math.abs(this.body.velocity.y) < 15) {
                     this.body.setVelocityY(this.body.velocity.y + Math.sin(time * 0.005) * 3);
                 }

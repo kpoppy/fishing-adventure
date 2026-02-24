@@ -20,7 +20,7 @@ export class Fish extends Phaser.Physics.Arcade.Sprite {
 
         // Slightly increase the display size to make the pixel art visible
         this.setDisplaySize(48, 48);
-        this.setTint(this.color); // Re-enabled tint to distinguish 10 types visually
+        // Removed setTint(this.color) to show original pixel art colors
 
         scene.add.existing(this);
         scene.physics.add.existing(this);

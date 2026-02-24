@@ -57,6 +57,16 @@
       margin-bottom: 5px;
     }
 
+    .hud-bottom-left {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      pointer-events: none;
+    }
+
     /* Fishing Specific HUD */
     #depth-meter {
       color: #4fc3f7;
@@ -64,6 +74,106 @@
 
     #fish-count {
       color: #ffd700;
+      margin-bottom: 10px;
+    }
+
+    /* Recent Catches */
+    .recent-catches {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 20px;
+      pointer-events: none;
+    }
+
+    .catch-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: catch-slide 0.4s ease-out;
+    }
+
+    .catch-icon {
+      width: 48px;
+      height: 48px;
+      background-image: url('assets/fish_sprite.png');
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      border-radius: 4px;
+      flex-shrink: 0;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .catch-name {
+      font-size: 14px;
+      color: #fff;
+      text-shadow: 2px 2px 0 #000;
+      white-space: nowrap;
+    }
+
+    @keyframes catch-slide {
+      0% {
+        transform: translateX(-30px);
+        opacity: 0;
+      }
+
+      100% {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    /* Colors for Catch Icons */
+    /* Colors for Catch Icons (Tint) */
+    .catch-icon[data-type="GOLDFISH"] {
+      box-shadow: 0 0 10px #FFD700;
+      border-color: #FFD700;
+    }
+
+    .catch-icon[data-type="NEON_TETRA"] {
+      box-shadow: 0 0 10px #00FFFF;
+      border-color: #00FFFF;
+    }
+
+    .catch-icon[data-type="MACKEREL"] {
+      box-shadow: 0 0 10px #708090;
+      border-color: #708090;
+    }
+
+    .catch-icon[data-type="CATFISH"] {
+      box-shadow: 0 0 10px #8B4513;
+      border-color: #8B4513;
+    }
+
+    .catch-icon[data-type="SALMON"] {
+      box-shadow: 0 0 10px #FA8072;
+      border-color: #FA8072;
+    }
+
+    .catch-icon[data-type="TUNA"] {
+      box-shadow: 0 0 10px #000080;
+      border-color: #000080;
+    }
+
+    .catch-icon[data-type="SWORDFISH"] {
+      box-shadow: 0 0 10px #00CED1;
+      border-color: #00CED1;
+    }
+
+    .catch-icon[data-type="ANGLERFISH"] {
+      box-shadow: 0 0 10px #800080;
+      border-color: #800080;
+    }
+
+    .catch-icon[data-type="SHARK"] {
+      box-shadow: 0 0 10px #A9A9A9;
+      border-color: #A9A9A9;
+    }
+
+    .catch-icon[data-type="KRAKEN"] {
+      box-shadow: 0 0 10px #DC143C;
+      border-color: #DC143C;
     }
 
     /* Modal Styles */
@@ -94,17 +204,138 @@
       <div class="hud-top">
         <div id="left-hud">
           <div id="depth-meter" class="hud-text">DEPTH: 0m</div>
-          <div id="buoyancy-text" class="hud-text">BUOYANCY: 8</div>
-          <div id="weight-text" class="hud-text" style="color:#ff8800;">WEIGHT: 4</div>
-          <div id="return-speed-text" class="hud-text" style="color:#66ccff;">RETURN SPD: 0.05</div>
           <div id="fish-count" class="hud-text">FISH: 0</div>
+          <!-- Recent Catches List -->
+          <div id="recent-catches" class="recent-catches">
+            <!-- Icons injected via JS -->
+          </div>
         </div>
         <div id="right-hud">
           <div id="time-text" class="hud-text">0.0s</div>
           <div id="money-text" class="hud-text">$0</div>
         </div>
       </div>
+
+      <!-- Bottom Left HUD for Bobber Stats -->
+      <div class="hud-bottom-left">
+        <div id="buoyancy-text" class="hud-text">BUOYANCY: 8</div>
+        <div id="weight-text" class="hud-text" style="color:#ff8800;">WEIGHT: 4</div>
+        <div id="return-speed-text" class="hud-text" style="color:#66ccff;">RETURN SPD: 0.05</div>
+      </div>
       <!-- Notifications / Floating Text handled by Canvas/EffectManager -->
+    </div>
+
+    <!-- Inventory UI -->
+    <div id="inventory-ui" class="game-overlay">
+      <h2>INVENTORY (BAG)</h2>
+      <div id="inventory-list" class="item-list"></div>
+      <button class="modal-btn" style="margin-top: 20px;"
+        onclick="document.getElementById('inventory-ui').style.display='none'">CLOSE</button>
+    </div>
+
+    <!-- Encyclopedia UI -->
+    <div id="encyclopedia-ui" class="game-overlay">
+      <h2>ENCYCLOPEDIA</h2>
+      <div id="encyclopedia-list" class="item-list"></div>
+      <button class="modal-btn" style="margin-top: 20px;"
+        onclick="document.getElementById('encyclopedia-ui').style.display='none'">CLOSE</button>
+    </div>
+
+    <!-- Boat Upgrade UI -->
+    <div id="upgrade-ui" class="game-overlay">
+      <h2>BOAT REFIT (UPGRADE)</h2>
+      <div id="upgrade-list" class="item-list">
+        <!-- Upgrades will be injected here -->
+      </div>
+      <button class="modal-btn" style="margin-top: 20px;"
+        onclick="document.getElementById('upgrade-ui').style.display='none'">CLOSE</button>
+    </div>
+
+    <!-- Cheat/Debug UI -->
+    <div id="cheat-ui" class="game-overlay cheat-menu">
+      <h2>DEBUG / CHEAT MENU</h2>
+      <div class="cheat-grid">
+        <button class="cheat-btn" id="cheat-money">+$1,000 CASH</button>
+        <button class="cheat-btn" id="cheat-items">GIVE ALL COMPONENTS (x10)</button>
+        <button class="cheat-btn" id="cheat-fish">UNLOCK ALL ENCYCLOPEDIA</button>
+        <button class="cheat-btn" id="cheat-upgrade">MAX ALL BOAT UPGRADES</button>
+        <button class="cheat-btn" id="cheat-pet">MAX PET FRIENDSHIP</button>
+      </div>
+      <button class="modal-btn" style="margin-top: 20px;"
+        onclick="document.getElementById('cheat-ui').style.display='none'">CLOSE</button>
+    </div>
+
+    <!-- Tank UI -->
+    <div id="tank-ui" class="game-overlay tank-menu">
+      <h2>LIVE WELL (TANK)</h2>
+      <div id="tank-list" class="item-list">
+        <!-- Caught fish will be injected here -->
+      </div>
+      <button class="modal-btn" style="margin-top: 20px;"
+        onclick="document.getElementById('tank-ui').style.display='none'">CLOSE</button>
+    </div>
+
+    <!-- Help UI -->
+    <div id="help-ui" class="game-overlay">
+      <h2>CONTROLS HELP</h2>
+      <div class="help-content">
+        <table class="help-table">
+          <tr>
+            <th>키</th>
+            <th>설명</th>
+          </tr>
+          <tr>
+            <td>A / D / Arrow</td>
+            <td>플레이어 이동</td>
+          </tr>
+          <tr>
+            <td>Q / E</td>
+            <td>보트 조종 (자유 이동)</td>
+          </tr>
+          <tr>
+            <td>Mouse Click</td>
+            <td>낚시찌 던지기 / 릴 감기</td>
+          </tr>
+          <tr>
+            <td>W / S</td>
+            <td>(미끼 투척 후) 수심 조절</td>
+          </tr>
+          <tr>
+            <td>I</td>
+            <td>가방(인벤토리) 열기</td>
+          </tr>
+          <tr>
+            <td>G</td>
+            <td>물고기 도감 열기</td>
+          </tr>
+          <tr>
+            <td>T</td>
+            <td>수조(Live Well) 확인</td>
+          </tr>
+          <tr>
+            <td>U</td>
+            <td>보트 업그레이드 메뉴</td>
+          </tr>
+          <tr>
+            <td>F</td>
+            <td>애완동물 먹이 주기</td>
+          </tr>
+          <tr>
+            <td>+ / -</td>
+            <td>카메라 줌 확대/축소</td>
+          </tr>
+          <tr>
+            <td>R</td>
+            <td>게임 재시작 (공장 초기화)</td>
+          </tr>
+          <tr>
+            <td>H</td>
+            <td>이 도움말 켜기/끄기</td>
+          </tr>
+        </table>
+      </div>
+      <button class="modal-btn" style="margin-top: 20px;"
+        onclick="document.getElementById('help-ui').style.display='none'">CLOSE</button>
     </div>
 
 
@@ -118,11 +349,11 @@
       </div>
     </div>
     <div class="controls-hint">
-      Boat: A/D • Player: Arrows • Depth: W/S • Space: Cast/Reel • R: Reset
+      Boat: Q/E • Player: A/D/Arrows • Bag: I • Guide: G • Tank: T • Refit: U • Feed: F • DEBUG: 9 • Reset: R
     </div>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
   <script type="module" src="./src/main.js?v=6"></script>
 </body>
 

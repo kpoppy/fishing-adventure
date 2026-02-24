@@ -7,21 +7,18 @@ export class SaveManager {
         this.BEST_TIME_KEY = "godori-best-sec";
     }
 
-    save(data) {
+    save(gameState) {
         const state = {
-            wave: data.wave,
-            loop: data.loop,
-            hp: data.hp,
-            maxHp: data.maxHp,
-            damage: data.damage,
-            ult: data.ult,
-            score: data.score,
-            time: data.time,
+            progress: gameState.progress,
+            inventory: gameState.inventory,
+            discoveredFish: Array.from(gameState.discoveredFish), // Convert Set to Array for JSON
+            upgrades: gameState.upgrades,
+            pet: gameState.pet,
             savedAt: Date.now()
         };
         try {
             localStorage.setItem(this.SAVE_KEY, JSON.stringify(state));
-            this.scene.effectManager.showFloatingText(VIEW_W - 100, 50, "SAVED", "#ffff00");
+            this.scene.effectManager.showFloatingText(VIEW_W - 100, 50, "SYSTEM SAVED", "#00ff00");
         } catch (e) {
             console.error("Save failed:", e);
         }

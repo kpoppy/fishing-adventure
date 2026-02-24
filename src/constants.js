@@ -23,5 +23,7 @@ export const DEPTH = {
     PLATFORM: -10,
     CHAR: 0,
     OBJ: 10,
-    UI: 100
+    HUD: 50,
+    UI: 100,
+    TOP: 1000
 };

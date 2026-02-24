@@ -26,7 +26,7 @@ def is_background_candidate(color, bg_seeds, tolerance):
             
     return False
 
-def remove_background(input_path, output_path, tolerance=50):
+def remove_background(input_path, output_path, tolerance=50, do_crop=True):
     try:
         img = Image.open(input_path).convert("RGBA")
         width, height = img.size
@@ -80,11 +80,11 @@ def remove_background(input_path, output_path, tolerance=50):
             final_transparent.update(current_layer)
         transparent_pixels = final_transparent
 
-        # Autocrop
-        min_x, min_y, max_x, max_y = width, height, -1, -1
+        # Create new image with transparency
         new_img = Image.new("RGBA", (width, height), (255, 255, 255, 0))
         new_pixels = new_img.load()
         
+        min_x, min_y, max_x, max_y = width, height, -1, -1
         content_found = False
         for y in range(height):
             for x in range(width):
@@ -94,11 +94,12 @@ def remove_background(input_path, output_path, tolerance=50):
                     min_y, max_y = min(min_y, y), max(max_y, y)
                     content_found = True
         
-        if content_found:
+        # Apply crop only if requested
+        if do_crop and content_found:
             new_img = new_img.crop((min_x, min_y, max_x + 1, max_y + 1))
                 
         new_img.save(output_path, "PNG")
-        print(f"Processed: {input_path}")
+        print(f"Processed: {input_path} (Crop: {do_crop})")
         return True
     except Exception as e:
         print(f"Error: {e}")
@@ -106,6 +107,20 @@ def remove_background(input_path, output_path, tolerance=50):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
+        print("Usage: python remove_bg.py <input> <output> [tolerance] [--no-crop]")
         sys.exit(1)
-    tol = int(sys.argv[3]) if len(sys.argv) > 3 else 50
-    remove_background(sys.argv[1], sys.argv[2], tol)
+        
+    input_file = sys.argv[1]
+    output_file = sys.argv[2]
+    
+    # Parse optional arguments
+    tol = 50
+    do_crop = True
+    
+    for arg in sys.argv[3:]:
+        if arg == "--no-crop":
+            do_crop = False
+        elif arg.isdigit():
+            tol = int(arg)
+            
+    remove_background(input_file, output_file, tol, do_crop)

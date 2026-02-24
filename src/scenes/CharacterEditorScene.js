@@ -1,4 +1,5 @@
 import { VIEW_W, VIEW_H } from "../constants.js";
+import { SoundManager } from "../managers/SoundManager.js";
 
 export class CharacterEditorScene extends Phaser.Scene {
     constructor() {
@@ -40,6 +41,7 @@ export class CharacterEditorScene extends Phaser.Scene {
     }
 
     create() {
+        this.soundManager = new SoundManager(this);
         try {
             this.createCheckerboardBackground();
             this.setupUI();
@@ -1802,7 +1804,7 @@ export class CharacterEditorScene extends Phaser.Scene {
         // Restore game UI layer
         const uiLayer = document.getElementById("ui-layer");
         if (uiLayer) uiLayer.style.display = "flex";
-        this.sound.play("click");
+        if (this.soundManager) this.soundManager.play("shoot"); // Reuse shoot as click
         this.scene.start("TitleScene");
     }
 
@@ -2006,7 +2008,7 @@ export class CharacterEditorScene extends Phaser.Scene {
             this.renderCurrentFrame();
             this.updateHTMLTimeline();
             URL.revokeObjectURL(url);
-            this.sound.play("click");
+            if (this.soundManager) this.soundManager.play("powerup"); // Feedback for load
 
             // Auto zoom for large images
             if (width > 500) this.cameras.main.setZoom(0.5);
@@ -2041,7 +2043,7 @@ export class CharacterEditorScene extends Phaser.Scene {
 
                     this.renderCurrentFrame();
                     this.updateHTMLTimeline();
-                    this.sound.play("click");
+                    if (this.soundManager) this.soundManager.play("shoot");
                 } else {
                     alert("Invalid JSON format. Expected { rodOffsets: [...] }");
                 }

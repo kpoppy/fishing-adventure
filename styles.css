@@ -189,6 +189,151 @@ body {
   font-size: 14px;
 }
 
+/* UI Overlays (Inventory, Encyclopedia) */
+.game-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  max-height: 400px;
+  background: rgba(20, 20, 35, 0.95);
+  border: 3px solid var(--gold);
+  border-radius: 12px;
+  padding: 24px;
+  display: none;
+  flex-direction: column;
+  z-index: 50;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), 0 0 15px var(--gold);
+  overflow-y: auto;
 }
 
-,
+.game-overlay h2 {
+  font-family: "Black Han Sans", sans-serif;
+  font-size: 32px;
+  color: var(--gold);
+  margin-top: 0;
+  border-bottom: 2px solid rgba(255, 204, 0, 0.3);
+  padding-bottom: 12px;
+  text-align: center;
+}
+
+.item-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.ui-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 12px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-item .name {
+  font-weight: 900;
+  color: #fff;
+}
+
+.ui-item .count {
+  font-size: 12px;
+  color: var(--gold);
+}
+
+.ui-item .desc {
+  font-size: 12px;
+  color: #aaa;
+  margin-top: 4px;
+}
+
+.locked-item {
+  filter: grayscale(1) opacity(0.5);
+  text-align: center;
+  padding: 20px;
+}
+
+/* Cheat Menu Special Style */
+.cheat-menu {
+  background: rgba(30, 0, 50, 0.95) !important;
+  border-color: #bc13fe !important;
+  box-shadow: 0 0 30px rgba(188, 19, 254, 0.5), 0 0 10px #bc13fe !important;
+}
+
+.cheat-menu h2 {
+  color: #bc13fe !important;
+  border-bottom-color: rgba(188, 19, 254, 0.3) !important;
+}
+
+.cheat-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.cheat-btn {
+  background: #330044;
+  border: 2px solid #bc13fe;
+  color: #fff;
+  padding: 10px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.cheat-btn:hover {
+  background: #bc13fe;
+  color: #000;
+  box-shadow: 0 0 15px #bc13fe;
+}
+
+.cheat-btn:active {
+  transform: scale(0.98);
+}
+
+/* Tank Menu Special Style */
+.tank-menu {
+  background: rgba(0, 30, 50, 0.95) !important;
+  border-color: #00d2ff !important;
+  box-shadow: 0 0 30px rgba(0, 210, 255, 0.5), 0 0 10px #00d2ff !important;
+}
+
+.tank-menu h2 {
+  color: #00d2ff !important;
+  border-bottom-color: rgba(0, 210, 255, 0.3) !important;
+}
+
+.fish-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 10px 15px;
+  border-radius: 6px;
+  border-left: 4px solid #00d2ff;
+  margin-bottom: 8px;
+}
+
+.fish-entry .info {
+  display: flex;
+  flex-direction: column;
+}
+
+.fish-entry .name {
+  font-size: 14px;
+  font-weight: 900;
+  color: #fff;
+}
+
+.fish-entry .details {
+  font-size: 11px;
+  color: #88ccee;
+  margin-top: 3px;
+}

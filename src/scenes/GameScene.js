@@ -7,6 +7,8 @@ import { SoundManager } from "../managers/SoundManager.js";
 import { UIManager } from "../managers/UIManager.js?v=2";
 import { SaveManager } from "../managers/SaveManager.js";
 import { FishManager } from "../managers/FishManager.js";
+import { gameState } from "../managers/GameState.js";
+import { dataManager } from "../managers/DataManager.js";
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -15,6 +17,8 @@ export class GameScene extends Phaser.Scene {
         this.fishCaught = 0;
         this.money = 0;
         this.finished = false;
+        this.worldTime = 0; // 0 to 1 cycle for day/night
+        this.dayDuration = 60000; // 60 seconds for a full cycle
     }
 
     preload() {
@@ -34,6 +38,11 @@ export class GameScene extends Phaser.Scene {
         this.load.image("black_duck", "assets/black_duck.png");
         this.load.image("sea_waves", "assets/sea_wave_pattern_1771868267063.png");
 
+        // 3-Layer Parallax Backgrounds
+        this.load.image("bg_farthest", "assets/bg_farthest.png");
+        this.load.image("bg_further", "assets/bg_further.png");
+        this.load.image("bg_far", "assets/bg_far.png");
+
         // Suppress "atlas" not found and WebGL errors by loading a fallback
         this.load.spritesheet("atlas", "assets/fish_sprite.png", {
             frameWidth: 32,
@@ -48,37 +57,52 @@ export class GameScene extends Phaser.Scene {
         this.uiManager = new UIManager(this);
         this.uiManager.setHUDVisible(true);
         this.fishManager = new FishManager(this);
+        this.gameState = gameState;
+        this.dataManager = dataManager;
 
         this.effectManager.createAnimations();
 
         // 1. World, Water & Parallax Background
         // Base Sky Color (Dark reddish for apocalypse theme)
-        this.add.rectangle(0, -5000, VIEW_W * 10, 5000 + GameConfig.World.WATER_LEVEL, 0x220000).setOrigin(0.5, 0).setDepth(DEPTH.BG - 1).setScrollFactor(0);
+        // Global Sky/Atmosphere (Centers at screen mid)
+        // Global Sky/Atmosphere (Saved as property for color animation)
+        // Global Sky/Atmosphere (Bright Blue for Day)
+        this.skyRect = this.add.rectangle(VIEW_W / 2, -10000, VIEW_W * 20, 10000 + GameConfig.World.WATER_LEVEL, 0x88ccff).setOrigin(0.5, 0).setDepth(DEPTH.BG - 1).setScrollFactor(0, 1);
 
-        // Apocalypse Background Layer (Far)
-        // Use TileSprite with a width matching view to avoid WebGL limits
-        // Set horizontal scroll factor to 0 so it stays with camera, we'll shift tilePositionX instead
-        this.apocBg = this.add.tileSprite(0, GameConfig.World.WATER_LEVEL, VIEW_W, 640, "apocalypse_bg").setOrigin(0, 1).setDepth(DEPTH.BG).setScrollFactor(0, 1.0);
-        this.apocBg.setScale(1.0);
+        // 3-Layer Parallax Background (Farthest to Closest)
+        // 1. Farthest (Sky, Moon) - Factor 0.05
+        this.bgFarthest = this.add.tileSprite(VIEW_W / 2, GameConfig.World.WATER_LEVEL, 8000, 640, "bg_farthest")
+            .setOrigin(0.5, 1).setDepth(DEPTH.BG).setScrollFactor(0, 1.0);
 
-        // Apocalypse Near Background Layer (Foreground / Debris)
-        this.apocNearBg = this.add.tileSprite(0, GameConfig.World.WATER_LEVEL, VIEW_W, 640, "apocalypse_near_bg").setOrigin(0, 1).setDepth(DEPTH.BG + 1).setScrollFactor(0, 1.0);
-        this.apocNearBg.setScale(0.1);
+        // 2. Further (Distant Oil Rig/Structures) - Factor 0.1
+        this.bgFurther = this.add.tileSprite(VIEW_W / 2, GameConfig.World.WATER_LEVEL, 8000, 640, "bg_further")
+            .setOrigin(0.5, 1).setDepth(DEPTH.BG + 1).setScrollFactor(0, 1.0);
+        this.bgFurther.setAlpha(0.7);
+
+        // 3. Far (Near Scrap/Masts) - Factor 0.2
+        this.bgFar = this.add.tileSprite(VIEW_W / 2, GameConfig.World.WATER_LEVEL, 8000, 640, "bg_far")
+            .setOrigin(0.5, 1).setDepth(DEPTH.BG + 2).setScrollFactor(0, 1.0);
+        this.bgFar.setAlpha(0.9);
+
 
         // Efficient water rectangle: follows camera but stays at water level
-        this.add.rectangle(0, GameConfig.World.WATER_LEVEL, VIEW_W, 150000, GameConfig.World.WATER_COLOR, 0.6).setOrigin(0).setDepth(DEPTH.BG_DECO).setScrollFactor(0, 1);
+        // Increased base alpha (from 0.6 to 0.8) for a darker, more "filled" look from the start
+        // Efficient water rectangle (Saved as property for color animation)
+        // Efficient water rectangle (Matches sky color at surface)
+        this.waterRect = this.add.rectangle(VIEW_W / 2, GameConfig.World.WATER_LEVEL, 8000, 150000, 0x88ccff, 1.0).setOrigin(0.5, 0).setDepth(DEPTH.BG_DECO).setScrollFactor(0, 1);
 
         // Toxic Sea Waves (Top layer of the water - Background part)
-        this.seaWaves = this.add.tileSprite(0, GameConfig.World.WATER_LEVEL, VIEW_W, 64, "sea_waves").setOrigin(0, 0.5).setDepth(DEPTH.BG_DECO + 1).setScrollFactor(0, 1);
+        this.seaWaves = this.add.tileSprite(VIEW_W / 2, GameConfig.World.WATER_LEVEL, 8000, 64, "sea_waves").setOrigin(0.5, 0.5).setDepth(DEPTH.BG_DECO + 1).setScrollFactor(0, 1);
         this.seaWaves.setAlpha(0.8);
 
         // Toxic Sea Waves (Top layer of the water - Foreground part to cover boat hull)
-        this.seaWavesFront = this.add.tileSprite(0, GameConfig.World.WATER_LEVEL + 35, VIEW_W, 64, "sea_waves").setOrigin(0, 0.5).setDepth(40).setScrollFactor(0, 1);
+        this.seaWavesFront = this.add.tileSprite(VIEW_W / 2, GameConfig.World.WATER_LEVEL + 35, 8000, 64, "sea_waves").setOrigin(0.5, 0.5).setDepth(40).setScrollFactor(0, 1);
         this.seaWavesFront.setAlpha(0.6);
         this.seaWavesFront.setScale(1, 0.8); // Slightly flatter for variation
 
         // Deep Sea Darkness Overlay (Follows camera, darkens as you go deeper)
-        this.deepSeaOverlay = this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x000000, 0).setOrigin(0).setDepth(DEPTH.HUD - 5).setScrollFactor(0);
+        // Center on screen and make huge
+        this.deepSeaOverlay = this.add.rectangle(VIEW_W / 2, VIEW_H / 2, 8000, 200000, 0x000000, 0).setOrigin(0.5).setDepth(DEPTH.HUD - 1).setScrollFactor(0);
 
         // Set World Bounds to match ultra-deep sea (up to 12,000m)
         // Make horizontal bounds essentially infinite so player can move forever (e.g. -50000 to 100000)
@@ -163,7 +187,7 @@ export class GameScene extends Phaser.Scene {
         this.dragStart = { x: 0, y: 0 };
         this.initialBody = { x: 0, y: 0, w: 0, h: 0, ox: 0, oy: 0 };
 
-        // Setup Object Inspector
+        // Setup Object Inspector (Debug Text)
         this.debugText = this.add.text(VIEW_W - 10, VIEW_H - 10, "", {
             fontSize: "14px",
             fill: "#00ff00",
@@ -173,7 +197,8 @@ export class GameScene extends Phaser.Scene {
         })
             .setOrigin(1, 1) // Anchor to bottom-right
             .setScrollFactor(0)
-            .setDepth(DEPTH.UI + 50);
+            .setDepth(DEPTH.UI + 50)
+            .setVisible(false); // Hide by default to prevent "black box" issue
 
         // Make debug text interactive for "Scrubbing" values
         this.debugText.setInteractive();
@@ -181,15 +206,14 @@ export class GameScene extends Phaser.Scene {
             if (!this.selectedDebugObject) return;
 
             // Determine which line was clicked
-            // Text is bottom-right (Origin 1,1)
             const textTop = VIEW_H - 10 - this.debugText.height;
             const localY = pointer.y - textTop;
-            const lineH = this.debugText.height / 4; // Roughly 4 lines: [Name], [Hitbox], [Offset], [Save]
+            const lineH = this.debugText.height / 4;
 
             if (localY >= lineH && localY < lineH * 2) {
-                this.dragHandle = 'scrubW'; // Dragging the Hitbox line
+                this.dragHandle = 'scrubW';
             } else if (localY >= lineH * 2 && localY < lineH * 3) {
-                this.dragHandle = 'scrubOX'; // Dragging the Offset line
+                this.dragHandle = 'scrubOX';
             } else {
                 return;
             }
@@ -241,7 +265,64 @@ export class GameScene extends Phaser.Scene {
             OPEN_BRACKET: Phaser.Input.Keyboard.KeyCodes.OPEN_BRACKET,
             CLOSED_BRACKET: Phaser.Input.Keyboard.KeyCodes.CLOSED_BRACKET,
             ZERO: Phaser.Input.Keyboard.KeyCodes.ZERO,
-            S: Phaser.Input.Keyboard.KeyCodes.S
+            I: Phaser.Input.Keyboard.KeyCodes.I,
+            G: Phaser.Input.Keyboard.KeyCodes.G,
+            U: Phaser.Input.Keyboard.KeyCodes.U,
+            NINE: Phaser.Input.Keyboard.KeyCodes.NINE,
+            T: Phaser.Input.Keyboard.KeyCodes.T,
+            PLUS: Phaser.Input.Keyboard.KeyCodes.PLUS,
+            MINUS: Phaser.Input.Keyboard.KeyCodes.MINUS,
+            NUMPAD_ADD: Phaser.Input.Keyboard.KeyCodes.NUMPAD_ADD,
+            NUMPAD_SUBTRACT: Phaser.Input.Keyboard.KeyCodes.NUMPAD_SUBTRACT,
+            H: Phaser.Input.Keyboard.KeyCodes.H
+        });
+
+        // Listen for upgrades to trigger immediate save or visual updates
+        this.events.on("boat-upgraded", (stat) => {
+            console.log(`[Event] Boat Upgraded: ${stat}`);
+            this.saveManager.save(this.gameState);
+        });
+
+        // Cheat Event Listeners
+        this.events.on("cheat-money", () => {
+            this.money += 1000;
+            this.effectManager.showFloatingText(this.player.x, this.player.y - 100, "CASH +$1000!", "#00ff00");
+            this.saveManager.save(this.gameState);
+        });
+
+        this.events.on("cheat-items", () => {
+            const allFish = this.dataManager.getAllFish();
+            allFish.forEach(f => {
+                this.gameState.addItem(f.component, 10);
+            });
+            this.effectManager.showFloatingText(this.player.x, this.player.y - 120, "ALL ITEMS x10!", "#bc13fe");
+            this.saveManager.save(this.gameState);
+        });
+
+        this.events.on("cheat-fish", () => {
+            const allFish = this.dataManager.getAllFish();
+            allFish.forEach(f => {
+                this.gameState.discoverFish(f.id);
+            });
+            this.effectManager.showFloatingText(this.player.x, this.player.y - 140, "ENCYCLOPEDIA COMPLETE!", "#bc13fe");
+            this.saveManager.save(this.gameState);
+        });
+
+        this.events.on("cheat-upgrade", () => {
+            ["speed", "armor", "light", "radResist"].forEach(stat => {
+                for (let i = 0; i < 5; i++) { // Max level roughly 5
+                    this.gameState.upgradeBoat(stat);
+                }
+            });
+            this.updateBoatVisuals();
+            this.effectManager.showFloatingText(this.player.x, this.player.y - 160, "BOAT MAXED OUT!", "#bc13fe");
+            this.saveManager.save(this.gameState);
+        });
+
+        this.events.on("cheat-pet", () => {
+            this.gameState.pet.friendship = 1000;
+            this.effectManager.showFloatingText(this.player.x, this.player.y - 180, "MAX PET LOVE! ❤️", "#ff00ff");
+            this.saveManager.save(this.gameState);
         });
 
         // 4. Game State Initial UI
@@ -249,11 +330,33 @@ export class GameScene extends Phaser.Scene {
         this.graphics = this.add.graphics();
         this.editorGraphics = this.add.graphics().setDepth(DEPTH.UI + 100);
         this.uiManager.update({ depth: 0, fish: 0, money: 0, time: 0, buoyancy: undefined, weight: undefined, returnSpeed: undefined });
+
+        // 5. Dynamic Camera Zoom Config
+        this.baseZoom = 1.0;
+        this.targetZoom = 1.0;
+        this.currentZoom = 1.0;
+
+        // Mouse Wheel for manual zoom adjustment
+        this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY, deltaZ) => {
+            if (deltaY > 0) {
+                this.baseZoom = Phaser.Math.Clamp(this.baseZoom - 0.1, 0.4, 3.0);
+            } else {
+                this.baseZoom = Phaser.Math.Clamp(this.baseZoom + 0.1, 0.4, 3.0);
+            }
+        });
+
+        // 6. Final Camera Alignment to prevent blackout
+        // Use centerOn for robust initial alignment
+        this.cameras.main.centerOn(this.boat.x, GameConfig.World.WATER_LEVEL);
+        this.cameras.main.setZoom(this.currentZoom || 1.0);
     }
 
     drawHitboxEditor() {
         this.editorGraphics.clear();
-        if (!this.physics.world.drawDebug || !this.selectedDebugObject || !this.selectedDebugObject.body) return;
+        if (!this.physics.world.drawDebug || !this.selectedDebugObject || !this.selectedDebugObject.body) {
+            if (this.debugText) this.debugText.setVisible(false);
+            return;
+        }
 
         const obj = this.selectedDebugObject;
         const body = obj.body;
@@ -272,9 +375,9 @@ export class GameScene extends Phaser.Scene {
         // Draw Resize Handles (8 points)
         const handleSize = 8 / cam.zoom;
         const resizePoints = [
-            { x: hx, y: hy }, { x: hx + hw / 2, y: hy }, { x: hx + hw, y: hy },
-            { x: hx, y: hy + hh / 2 }, { x: hx + hw, y: hy + hh / 2 },
-            { x: hx, y: hy + hh }, { x: hx + hw / 2, y: hy + hh }, { x: hx + hw, y: hy + hh }
+            { id: 'tl', x: hx, y: hy }, { id: 'tm', x: hx + hw / 2, y: hy }, { id: 'tr', x: hx + hw, y: hy },
+            { id: 'ml', x: hx, y: hy + hh / 2 }, { id: 'mr', x: hx + hw, y: hy + hh / 2 },
+            { id: 'bl', x: hx, y: hy + hh }, { id: 'bm', x: hx + hw / 2, y: hy + hh }, { id: 'br', x: hx + hw, y: hy + hh }
         ];
 
         this.editorGraphics.fillStyle(0xffffff, 1);
@@ -284,12 +387,11 @@ export class GameScene extends Phaser.Scene {
             this.editorGraphics.strokeRect(p.x - handleSize / 2, p.y - handleSize / 2, handleSize, handleSize);
         });
 
-        // Draw Center Move Handle (Distinct Style)
+        // Draw Center Move Handle
         const moveX = hx + hw / 2;
         const moveY = hy + hh / 2;
         this.editorGraphics.lineStyle(2 / cam.zoom, 0x0000ff, 1);
         this.editorGraphics.strokeCircle(moveX, moveY, handleSize);
-        this.editorGraphics.fillStyle(0x0000ff, 0.5);
         this.editorGraphics.fillCircle(moveX, moveY, handleSize);
 
         // Add a small cross inside the circle
@@ -297,6 +399,15 @@ export class GameScene extends Phaser.Scene {
         this.editorGraphics.lineStyle(1 / cam.zoom, 0xffffff, 1);
         this.editorGraphics.lineBetween(moveX - crossSize, moveY, moveX + crossSize, moveY);
         this.editorGraphics.lineBetween(moveX, moveY - crossSize, moveX, moveY + crossSize);
+
+        // Show Debug Text only when an object is being edited
+        this.debugText.setVisible(true);
+        this.debugText.setText(
+            `${obj.texture?.key || 'Object'}\n` +
+            `HITBOX: ${hw} x ${hh}\n` +
+            `OFFSET: ${body.offset.x.toFixed(1)}, ${body.offset.y.toFixed(1)}\n` +
+            `PRESS 'S' TO SAVE`
+        );
 
         // If 'S' key is pressed while an object is selected, log its current state
         if (Phaser.Input.Keyboard.JustDown(this.keys.S)) {
@@ -370,10 +481,42 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
+    updateCameraZoom(delta) {
+        if (!this.boat || !this.player) return;
+
+        // Dynamic target calculation based on boat velocity
+        const speed = Math.abs(this.boat.body.velocity.x);
+        const maxSpeed = 300; // Typical max boat speed
+        const moveFactor = Phaser.Math.Clamp(speed / maxSpeed, 0, 1);
+        const movementZoomFactor = Phaser.Math.Interpolation.Linear([1.0, 0.8], moveFactor);
+
+        // If casting, focus more (1.1x of base)
+        let stateZoomFactor = 1.0;
+        if (this.state === "CASTING" || this.state === "WAITING") {
+            stateZoomFactor = 1.1;
+        }
+
+        const rawTarget = (this.baseZoom || 1.0) * movementZoomFactor * stateZoomFactor;
+        this.targetZoom = Phaser.Math.Clamp(rawTarget, 0.4, 3.0);
+
+        // Smoothly interpolate current zoom toward target
+        // Kingdom: Two Crowns style smoothness
+        const lerpFactor = 0.002 * delta;
+        this.currentZoom = Phaser.Math.Linear(this.currentZoom, this.targetZoom, Phaser.Math.Clamp(lerpFactor, 0, 1));
+
+        // Safety check for NaN or extreme values
+        if (isNaN(this.currentZoom) || this.currentZoom <= 0) {
+            this.currentZoom = 1.0;
+        }
+
+        this.cameras.main.setZoom(this.currentZoom);
+    }
+
     update(time, delta) {
         if (this.finished) return;
 
         this.handleInput(delta);
+        this.updateCameraZoom(delta);
         this.fishManager.update(time, delta);
 
         // UI Update
@@ -381,14 +524,21 @@ export class GameScene extends Phaser.Scene {
             const depth = (this.bobber && this.bobber.active && this.bobber.y > GameConfig.World.WATER_LEVEL)
                 ? (this.bobber.y - GameConfig.World.WATER_LEVEL) / 10
                 : 0;
+
+            // Calculate 24h Game Time based on worldTime (0.0 = 06:00 AM)
+            const gameTimeTotalHours = (this.worldTime * 24 + 6) % 24;
+            const hours = Math.floor(gameTimeTotalHours);
+            const minutes = Math.floor((gameTimeTotalHours - hours) * 60);
+
             this.uiManager.update({
                 depth: depth,
                 fish: this.fishCaught,
                 money: this.money,
-                time: this.time.now / 1000,
+                gameTime: { hours, minutes },
                 buoyancy: this.bobber && this.bobber.active ? this.bobber.buoyancyK : undefined,
                 weight: this.bobber && this.bobber.active ? this.bobber.sinkWeight : undefined,
-                returnSpeed: this.bobber && this.bobber.active ? this.bobber.returnSpeed : undefined
+                returnSpeed: this.bobber && this.bobber.active ? this.bobber.returnSpeed : undefined,
+                recentCatches: this.gameState.recentCatches
             });
         }
 
@@ -401,6 +551,7 @@ export class GameScene extends Phaser.Scene {
         // Draw Interactive Editor if in debug mode
         this.drawHitboxEditor();
 
+
         // Bobber Rendering & Buoyancy
         this.graphics.clear();
         if (this.bobber && this.bobber.active) {
@@ -408,15 +559,37 @@ export class GameScene extends Phaser.Scene {
             this.bobber.isAdjusting = (this.keys.W.isDown || this.keys.S.isDown);
             this.bobber.update(time, delta);
 
-            // Draw Fishing Line
-            this.graphics.lineStyle(2, 0xffffff, 0.5);
+            // Draw Fishing Line (Dynamic based on depth)
+            const waterLevel = GameConfig.World.WATER_LEVEL;
+            let depth = Math.max(0, this.bobber.y - waterLevel);
+
+            // Base intensity starts from 0.8 and reaches 1.0 (fully opaque)
+            // Depth is in pixels, let's say 50m = 500 units in our game (approximation)
+            // Every 500 units, we increase intensity
+            let depthFactor = Math.min(1.0, depth / 5000); // Maxes out at 500m depth
+
+            let alpha = 0.7 + (depthFactor * 0.3); // Starts at 0.7, goes to 1.0
+            let thickness = 2 + (depthFactor * 1.5); // Gets thicker as it goes deeper
+
+            // Color gets "heavier" (slightly darker/bluer as it goes deep into toxic water)
+            // Interpolate white (0xffffff) to a darker grayish-blue (0x88bbff)
+            let color = Phaser.Display.Color.Interpolate.ColorWithColor(
+                Phaser.Display.Color.ValueToColor(0xffffff),
+                Phaser.Display.Color.ValueToColor(0xaabbcc),
+                100,
+                depthFactor * 100
+            );
+            let finalColor = Phaser.Display.Color.GetColor(color.r, color.g, color.b);
+
+            this.graphics.lineStyle(thickness, finalColor, alpha);
             this.graphics.beginPath();
 
             let rodX = this.player.x;
             let rodY = this.player.y;
             const offsetsData = this.cache.json.get("player_offsets");
             if (offsetsData && offsetsData.rodOffsets) {
-                const frameIdx = this.player.anims && this.player.anims.currentFrame ? this.player.anims.currentFrame.index - 1 : 0;
+                // Use frame.name to get the actual index even when setFrame() is used manually
+                const frameIdx = parseInt(this.player.frame.name) || 0;
                 const offset = offsetsData.rodOffsets[frameIdx] || offsetsData.rodOffsets[0];
                 // Apply player's current scale to the offset to correctly pin to the visual rod
                 rodX = this.player.x + (offset.x * this.player.scaleX * this.player.facing);
@@ -449,23 +622,31 @@ export class GameScene extends Phaser.Scene {
 
         // Handle horizontal camera manually for absolute smoothness (Runs unconditionally)
         if (!this.isCameraDetached) {
-            // Smoothly lerp camera X to center on the visual midpoint between boat and player
-            if (this.boat && this.player) {
-                const combinedCenterX = (this.boat.x + this.player.x) / 2;
-                const targetScrollX = combinedCenterX - VIEW_W / 2;
-                cam.scrollX = Phaser.Math.Linear(cam.scrollX, targetScrollX, 0.015);
+            // Center specifically on the boat to keep it central during zoom changes
+            if (this.boat) {
+                const targetX = this.boat.x;
+
+                // Correct formula to keep boat at world center of viewport
+                // The world center of a camera with width VIEW_W is always scrollX + VIEW_W/2
+                // Zoom scales around that center, but the center world coordinate remains the same.
+                const targetScrollX = targetX - (VIEW_W / 2);
+
+                let nextX = Phaser.Math.Linear(cam.scrollX, targetScrollX, 0.1);
+                if (isNaN(nextX)) nextX = targetScrollX;
+                cam.scrollX = nextX;
             }
         }
 
         // Draw Charge Bar
         if (this.player && this.player.isCharging) {
-            const barX = this.player.x - 20;
-            const barY = this.player.y - 50;
+            const barWidth = 100;
+            const barX = this.player.x - (barWidth / 2);
+            const barY = this.player.y - 60;
             this.graphics.fillStyle(0x000000, 1);
-            this.graphics.fillRect(barX, barY, 40, 8);
+            this.graphics.fillRect(barX, barY, barWidth, 10);
             const color = this.player.chargePower > 0.8 ? 0xff0000 : 0xffff00;
             this.graphics.fillStyle(color, 1);
-            this.graphics.fillRect(barX + 1, barY + 1, 38 * this.player.chargePower, 6);
+            this.graphics.fillRect(barX + 2, barY + 2, (barWidth - 4) * this.player.chargePower, 6);
         }
 
         // 8. Visual Environment Updates
@@ -476,22 +657,79 @@ export class GameScene extends Phaser.Scene {
             this.seaWavesFront.tilePositionX += 0.8; // Faster scroll for parallax effect
         }
 
+        // Update World Time Cycle (sine wave for smooth transition)
+        this.worldTime = (time % this.dayDuration) / this.dayDuration;
+        const timeRatio = (Math.sin(this.worldTime * Math.PI * 2) + 1) / 2; // 0 (night) to 1 (day)
+
         if (this.deepSeaOverlay) {
-            // Darken as we go deeper. 
-            // Let's reach max darkness (0.8 alpha) around 5000 pixels deep for dramatic effect.
-            const depth = Math.max(0, cam.scrollY);
-            const darkness = Math.min(0.8, depth / 5000);
-            this.deepSeaOverlay.setAlpha(darkness);
+            const cam = this.cameras.main;
+            const surfaceScrollY = GameConfig.World.WATER_LEVEL - (VIEW_H / 2);
+            const depth = Math.max(0, cam.scrollY - surfaceScrollY);
+
+            // Reaching max darkness at 10000 units (1000m)
+            const transitionDist = 10000;
+            const depthRatio = Phaser.Math.Clamp(depth / transitionDist, 0, 1);
+
+            // 1. Update Black Overlay Alpha (Subtle darkening)
+            this.deepSeaOverlay.setAlpha(depthRatio * 0.95);
+
+            // 2. Sky Color: Interpolate between Day, Night, and Abyss
+            // Day: 0x88ccff, Night: 0x000022, Abyss: 0x000000
+            const daySky = Phaser.Display.Color.ValueToColor(0x88ccff);
+            const nightSky = Phaser.Display.Color.ValueToColor(0x000022);
+            const abyssSky = Phaser.Display.Color.ValueToColor(0x000000);
+
+            // First interpolate between day and night based on time
+            const timeColor = Phaser.Display.Color.Interpolate.ColorWithColor(nightSky, daySky, 100, timeRatio * 100);
+            // Then interpolate toward abyss based on depth
+            const finalSkyInterp = Phaser.Display.Color.Interpolate.ColorWithColor(
+                timeColor,
+                abyssSky,
+                100,
+                depthRatio * 100
+            );
+            const finalSkyColor = Phaser.Display.Color.GetColor(finalSkyInterp.r, finalSkyInterp.g, finalSkyInterp.b);
+
+            if (this.skyRect) this.skyRect.setFillStyle(finalSkyColor);
+
+            // 3. Water Color: Independent of time, only depth (Toxic Red -> Abyss Black)
+            const waterStart = Phaser.Display.Color.ValueToColor(0x220000);
+            const waterEnd = Phaser.Display.Color.ValueToColor(0x000000);
+            const waterInterp = Phaser.Display.Color.Interpolate.ColorWithColor(waterStart, waterEnd, 100, depthRatio * 100);
+            const finalWaterColor = Phaser.Display.Color.GetColor(waterInterp.r, waterInterp.g, waterInterp.b);
+
+            if (this.waterRect) this.waterRect.setFillStyle(finalWaterColor);
+
+            // 4. Sprite Tints: Affected by both time (at surface) and depth
+            // Use white (0xffffff) at day, nightSky (dark blue) at night, toward black at depth
+            const tintStart = Phaser.Display.Color.Interpolate.ColorWithColor(nightSky, { r: 255, g: 255, b: 255 }, 100, timeRatio * 100);
+            const tintEnd = Phaser.Display.Color.ValueToColor(0x000000);
+            const tintInterp = Phaser.Display.Color.Interpolate.ColorWithColor(tintStart, tintEnd, 100, depthRatio * 100);
+            const finalTint = Phaser.Display.Color.GetColor(tintInterp.r, tintInterp.g, tintInterp.b);
+
+            if (this.bgFarthest) this.bgFarthest.setTint(finalTint);
+            if (this.bgFurther) this.bgFurther.setTint(finalTint);
+            if (this.bgFar) this.bgFar.setTint(finalTint);
+            if (this.seaWaves) this.seaWaves.setTint(finalTint);
+            if (this.seaWavesFront) this.seaWavesFront.setTint(finalTint);
+
+            // Store for UI update
+            this.currentEnvDarkness = depthRatio;
         }
     }
 
     handleInput(delta) {
-        // 1. Debug Toggle (Key 0) - Check this FIRST so we can always exit debug mode
+        const cam = this.cameras.main;
+        // 1. Debug Toggle (Key 0)
         if (Phaser.Input.Keyboard.JustDown(this.keys.ZERO)) {
             this.physics.world.drawDebug = !this.physics.world.drawDebug;
 
             // Sync physics pause/resume with debug mode
             if (this.physics.world.drawDebug) {
+                // Ensure debug graphic exists for Phaser's internal use to prevent crash
+                if (!this.physics.world.debugGraphic) {
+                    this.physics.world.createDebugGraphic();
+                }
                 this.physics.world.pause();
                 console.log("[DEBUG] Physics Paused for Hitbox Editing");
             } else {
@@ -503,7 +741,19 @@ export class GameScene extends Phaser.Scene {
                 this.physics.world.debugGraphic.setVisible(this.physics.world.drawDebug);
             }
             if (!this.physics.world.drawDebug) {
+                this.debugText.setVisible(false);
                 this.debugText.setText("");
+
+                // --- Safe Recovery from Debug Mode ---
+                // If player is intersecting with boat, snap them to top to prevent falling through
+                const isOverlapping = Phaser.Geom.Intersects.RectangleToRectangle(this.player.body, this.boat.body);
+                if (isOverlapping) {
+                    // Position player exactly on top of boat's hitbox
+                    // Player's Y is centered, so we subtract half height from boat's top
+                    this.player.y = this.boat.body.top - (this.player.body.height / 2) - 5;
+                    this.player.body.velocity.y = 0;
+                    console.log("[DEBUG] Player snapped to boat deck to prevent falling through");
+                }
             }
         }
 
@@ -519,7 +769,6 @@ export class GameScene extends Phaser.Scene {
         if (this.physics.world.drawDebug && this.selectedDebugObject) {
             const obj = this.selectedDebugObject;
             const body = obj.body;
-            const cam = this.cameras.main;
             const worldX = pointer.worldX;
             const worldY = pointer.worldY;
             const handleSize = 16 / cam.zoom; // Slightly larger hit area for easier grabbing
@@ -641,6 +890,49 @@ export class GameScene extends Phaser.Scene {
         }
 
         if (this.state === "IDLE") {
+            // Check for Menu Toggles
+            if (Phaser.Input.Keyboard.JustDown(this.keys.I)) {
+                this.uiManager.toggleInventory(this.gameState, this.dataManager);
+                return;
+            }
+            if (Phaser.Input.Keyboard.JustDown(this.keys.G)) {
+                this.uiManager.toggleEncyclopedia(this.gameState, this.dataManager);
+                return;
+            }
+            if (Phaser.Input.Keyboard.JustDown(this.keys.U)) {
+                this.uiManager.toggleUpgrade(this.gameState, this.dataManager);
+                return;
+            }
+            if (Phaser.Input.Keyboard.JustDown(this.keys.NINE)) {
+                this.uiManager.toggleCheatMenu();
+                return;
+            }
+            if (Phaser.Input.Keyboard.JustDown(this.keys.T)) {
+                this.uiManager.toggleTank(this.gameState, this.dataManager);
+                return;
+            }
+            if (Phaser.Input.Keyboard.JustDown(this.keys.H)) {
+                this.uiManager.toggleHelp();
+                return;
+            }
+
+            // Keyboard Zoom Controls (+ / -)
+            if (this.keys.PLUS.isDown || this.keys.NUMPAD_ADD.isDown) {
+                this.baseZoom = Phaser.Math.Clamp(this.baseZoom + 0.01, 0.4, 3.0);
+            }
+            if (this.keys.MINUS.isDown || this.keys.NUMPAD_SUBTRACT.isDown) {
+                this.baseZoom = Phaser.Math.Clamp(this.baseZoom - 0.01, 0.4, 3.0);
+            }
+
+            // Prevent casting if any UI overlay is open
+            const isAnyMenuOpen = (this.uiManager.inventoryUI && this.uiManager.inventoryUI.style.display === "flex") ||
+                (this.uiManager.encyclopediaUI && this.uiManager.encyclopediaUI.style.display === "flex") ||
+                (this.uiManager.upgradeUI && this.uiManager.upgradeUI.style.display === "flex") ||
+                (this.uiManager.cheatUI && this.uiManager.cheatUI.style.display === "flex") ||
+                (this.uiManager.tankUI && this.uiManager.tankUI.style.display === "flex") ||
+                (this.uiManager.helpUI && this.uiManager.helpUI.style.display === "flex");
+            if (isAnyMenuOpen) return;
+
             if (isJustDown && (!this.lastReelTime || this.time.now - this.lastReelTime > 300)) {
                 this.state = "CASTING";
                 this.player.isCharging = true;
@@ -670,153 +962,186 @@ export class GameScene extends Phaser.Scene {
                 this.reelBobber();
             }
 
-            // Manual Depth Adjustment (W/S) using Velocity
-            if (this.bobber && this.bobber.active && this.bobber.body) {
-                const adjSpeed = GameConfig.Rod.DEPTH_ADJUST_SPEED || 200;
+            // Manual Depth Adjustment (W/S) - Now affects targetDepth for permanent positioning
+            if (this.bobber && this.bobber.active) {
+                const depthChangeSpeed = 5; // Pixels per frame
                 if (this.keys.W.isDown) {
-                    // Prevent going too high above water
-                    if (this.bobber.y > GameConfig.World.WATER_LEVEL - 20) {
-                        this.bobber.body.setVelocityY(-adjSpeed);
-                    } else {
-                        this.bobber.body.setVelocityY(0);
-                        this.bobber.y = GameConfig.World.WATER_LEVEL - 20;
-                    }
+                    // Pull up
+                    this.bobber.targetDepth = Math.max(-150, this.bobber.targetDepth - depthChangeSpeed);
                 } else if (this.keys.S.isDown) {
-                    // Apply MAX_DEPTH limit
-                    const currentDepth = this.bobber.y - GameConfig.World.WATER_LEVEL;
-                    const maxDepthPixels = GameConfig.Rod.MAX_DEPTH * 10; // 1m = 10px
-
-                    if (currentDepth < maxDepthPixels) {
-                        this.bobber.body.setVelocityY(adjSpeed * 2.5); // Increase sink speed heavily to combat buoyancy/damping
-                    } else {
-                        this.bobber.body.setVelocityY(0);
-                        this.bobber.y = GameConfig.World.WATER_LEVEL + maxDepthPixels;
-                    }
-                } else if (!this.bobber.inWater) {
-                    // If in air and no keys pressed, let gravity work? 
-                    // Actually buoyancy handles it in update if inWater is false.
+                    // Sink down
+                    const maxDepthPixels = GameConfig.Rod.MAX_DEPTH * 10;
+                    this.bobber.targetDepth = Math.min(maxDepthPixels, this.bobber.targetDepth + depthChangeSpeed);
                 }
             }
         }
 
         if (this.physics.world.drawDebug) {
             this.boat.body.setVelocityX(0);
-            // No return here anymore to let ZERO key check pass below (actually we moved ZERO check up, but let's be safe)
         } else {
-            const boatSpeed = GameConfig.Player.BOAT_SPEED || 150;
-            const cam = this.cameras.main;
-            // ... (rest of movement)
-        }
+            const baseBoatSpeed = GameConfig.Player.BOAT_SPEED || 150;
+            const speedBonus = (this.gameState.upgrades.speed || 0) * 50;
+            const boatSpeed = baseBoatSpeed + speedBonus;
 
-        const boatSpeed = GameConfig.Player.BOAT_SPEED || 150;
-        const cam = this.cameras.main;
-
-        if (this.keys.A.isDown) {
-            this.boat.body.setVelocityX(-boatSpeed);
-            this.boat.setFlipX(true); // Boat faces left
-            if (this.player) {
-                this.player.setFlipX(true);
-                this.player.facing = -1;
-            }
-            this.isCameraDetached = false; // Reattach intentionally
-        } else if (this.keys.D.isDown) {
-            this.boat.body.setVelocityX(boatSpeed);
-            this.boat.setFlipX(false); // Boat faces right
-            if (this.player) {
-                this.player.setFlipX(false);
-                this.player.facing = 1;
-            }
-            this.isCameraDetached = false; // Reattach intentionally
-        } else if (this.keys.Q.isDown) {
-            this.isCameraDetached = true; // Detach selectively
-
-            // Bounds check for Q (left edge of screen)
-            const minX = cam.scrollX + (this.boat.displayWidth / 2);
-            if (this.boat.x > minX) {
+            if (this.keys.A.isDown) {
                 this.boat.body.setVelocityX(-boatSpeed);
-                this.boat.setFlipX(true);
+                this.boat.setFlipX(true); // Boat faces left
                 if (this.player) {
                     this.player.setFlipX(true);
                     this.player.facing = -1;
                 }
-            } else {
-                this.boat.body.setVelocityX(0);
-                this.boat.x = minX;
-            }
-        } else if (this.keys.E.isDown) {
-            this.isCameraDetached = true; // Detach selectively
-
-            // Bounds check for E (right edge of screen)
-            const maxX = cam.scrollX + VIEW_W - (this.boat.displayWidth / 2);
-            if (this.boat.x < maxX) {
+                this.isCameraDetached = false; // Reattach intentionally
+            } else if (this.keys.D.isDown) {
                 this.boat.body.setVelocityX(boatSpeed);
-                this.boat.setFlipX(false);
+                this.boat.setFlipX(false); // Boat faces right
                 if (this.player) {
                     this.player.setFlipX(false);
                     this.player.facing = 1;
                 }
+                this.isCameraDetached = false; // Reattach intentionally
+            } else if (this.keys.Q.isDown) {
+                this.isCameraDetached = true; // Detach selectively
+
+                // Bounds check for Q (left edge of visible screen)
+                // Account for zoom: visible width from center is (VIEW_W / 2) / zoom
+                const zoom = Math.max(0.1, cam.zoom);
+                const halfVisibleWidth = (VIEW_W / 2) / zoom;
+                const minX = cam.scrollX + (VIEW_W / 2) - halfVisibleWidth + (this.boat.displayWidth / 2);
+
+                if (this.boat.x > minX) {
+                    this.boat.body.setVelocityX(-boatSpeed);
+                    this.boat.setFlipX(true);
+                    if (this.player) {
+                        this.player.setFlipX(true);
+                        this.player.facing = -1;
+                    }
+                } else {
+                    this.boat.body.setVelocityX(0);
+                    this.boat.x = minX;
+                }
+            } else if (this.keys.E.isDown) {
+                this.isCameraDetached = true; // Detach selectively
+
+                // Bounds check for E (right edge of visible screen)
+                const zoom = Math.max(0.1, cam.zoom);
+                const halfVisibleWidth = (VIEW_W / 2) / zoom;
+                const maxX = cam.scrollX + (VIEW_W / 2) + halfVisibleWidth - (this.boat.displayWidth / 2);
+
+                if (this.boat.x < maxX) {
+                    this.boat.body.setVelocityX(boatSpeed);
+                    this.boat.setFlipX(false);
+                    if (this.player) {
+                        this.player.setFlipX(false);
+                        this.player.facing = 1;
+                    }
+                } else {
+                    this.boat.body.setVelocityX(0);
+                    this.boat.x = maxX;
+                }
             } else {
+                // No manual input
                 this.boat.body.setVelocityX(0);
-                this.boat.x = maxX;
-            }
-        } else {
-            // No manual input
-            this.boat.body.setVelocityX(0);
 
-            // Very slow auto-return mechanism: Move bobber toward boat if it's off-screen
+                // Very slow auto-return mechanism: Move bobber toward boat if it's off-screen
+                if (this.bobber && this.bobber.active) {
+                    const margin = 20; // Wait until it's off-screen
+
+                    // Detect if it flew off screen to start returning
+                    if (!this.bobber.isReturning) {
+                        if (this.bobber.x < cam.scrollX - margin || this.bobber.x > cam.scrollX + VIEW_W + margin) {
+                            this.bobber.isReturning = true;
+                        }
+                    }
+
+                    if (this.bobber.isReturning) {
+                        // Slowly pull the bobber back under the boat using the dynamic returnSpeed
+                        this.bobber.x = Phaser.Math.Linear(this.bobber.x, this.boat.x, this.bobber.returnSpeed);
+                        // Dampen existing X momentum heavily 
+                        this.bobber.body.setVelocityX(this.bobber.body.velocity.x * 0.8);
+
+                        // Once it is close enough to the boat's center, stop the return mode
+                        if (Math.abs(this.bobber.x - this.boat.x) < 5) {
+                            this.bobber.x = this.boat.x;
+                            this.bobber.isReturning = false;
+                        }
+                    }
+                }
+            }
+
+            if (this.input.keyboard.checkDown(this.keys.R, 1000)) {
+                this.scene.restart();
+            }
+
+            // 5. Buoyancy Test Keys ([ / ])
             if (this.bobber && this.bobber.active) {
-                const margin = 20; // Wait until it's off-screen
-
-                // Detect if it flew off screen to start returning
-                if (!this.bobber.isReturning) {
-                    if (this.bobber.x < cam.scrollX - margin || this.bobber.x > cam.scrollX + VIEW_W + margin) {
-                        this.bobber.isReturning = true;
-                    }
-                }
-
-                if (this.bobber.isReturning) {
-                    // Slowly pull the bobber back under the boat using the dynamic returnSpeed
-                    this.bobber.x = Phaser.Math.Linear(this.bobber.x, this.boat.x, this.bobber.returnSpeed);
-                    // Dampen existing X momentum heavily 
-                    this.bobber.body.setVelocityX(this.bobber.body.velocity.x * 0.8);
-
-                    // Once it is close enough to the boat's center, stop the return mode
-                    if (Math.abs(this.bobber.x - this.boat.x) < 5) {
-                        this.bobber.x = this.boat.x;
-                        this.bobber.isReturning = false;
-                    }
+                if (Phaser.Input.Keyboard.JustDown(this.keys.OPEN_BRACKET)) {
+                    this.bobber.buoyancyK = Math.max(0, this.bobber.buoyancyK - 1);
+                    this.effectManager.showFloatingText(this.bobber.x, this.bobber.y - 20, `Buoyancy: ${this.bobber.buoyancyK}`, "#ff4444");
+                } else if (Phaser.Input.Keyboard.JustDown(this.keys.CLOSED_BRACKET)) {
+                    this.bobber.buoyancyK = Math.min(50, this.bobber.buoyancyK + 1);
+                    this.effectManager.showFloatingText(this.bobber.x, this.bobber.y - 20, `Buoyancy: ${this.bobber.buoyancyK}`, "#44ff44");
                 }
             }
 
-            // DO NOT reset this.isCameraDetached here. 
-            // If they were drifting via Q/E, let them stay detached 
-            // until they press A or D.
-        }
+            // 7. Parallax Background Manual Update
+            if (this.bgFarthest) this.bgFarthest.tilePositionX = cam.scrollX * 0.05;
+            if (this.bgFurther) this.bgFurther.tilePositionX = cam.scrollX * 0.1;
+            if (this.bgFar) this.bgFar.tilePositionX = cam.scrollX * 0.2;
 
-        if (this.input.keyboard.checkDown(this.keys.R, 1000)) {
-            this.scene.restart();
+            // 8. Pet Interaction Check
+            this.checkPetInteraction();
         }
+    }
 
-        // 5. Buoyancy Test Keys ([ / ])
-        if (this.bobber && this.bobber.active) {
-            if (Phaser.Input.Keyboard.JustDown(this.keys.OPEN_BRACKET)) {
-                this.bobber.buoyancyK = Math.max(0, this.bobber.buoyancyK - 1);
-                this.effectManager.showFloatingText(this.bobber.x, this.bobber.y - 20, `Buoyancy: ${this.bobber.buoyancyK}`, "#ff4444");
-                console.log(`Buoyancy decreased to: ${this.bobber.buoyancyK}`);
-            } else if (Phaser.Input.Keyboard.JustDown(this.keys.CLOSED_BRACKET)) {
-                this.bobber.buoyancyK = Math.min(50, this.bobber.buoyancyK + 1);
-                this.effectManager.showFloatingText(this.bobber.x, this.bobber.y - 20, `Buoyancy: ${this.bobber.buoyancyK}`, "#44ff44");
-                console.log(`Buoyancy increased to: ${this.bobber.buoyancyK}`);
+    checkPetInteraction() {
+        if (!this.blackDuck || !this.player) return;
+
+        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.blackDuck.x, this.blackDuck.y);
+        const interactDist = 60;
+
+        if (dist < interactDist) {
+            if (!this.petPrompt) {
+                this.petPrompt = this.add.text(this.blackDuck.x, this.blackDuck.y - 40, "[F] FEED", {
+                    fontSize: "16px",
+                    fontFamily: "'Press Start 2P', cursive",
+                    fill: "#ffffff",
+                    backgroundColor: "#000000"
+                }).setOrigin(0.5).setDepth(DEPTH.UI);
             }
-        }
+            this.petPrompt.setPosition(this.blackDuck.x, this.blackDuck.y - 40);
+            this.petPrompt.setVisible(true);
 
-        // 7. Parallax Background Manual Update
-        // Shift tilePositionX based on camera scroll for smooth parallax without massive width
-        if (this.apocBg) {
-            this.apocBg.tilePositionX = cam.scrollX * 0.05;
+            if (Phaser.Input.Keyboard.JustDown(this.keys.F)) {
+                this.interactWithPet();
+            }
+        } else if (this.petPrompt) {
+            this.petPrompt.setVisible(false);
         }
-        if (this.apocNearBg) {
-            this.apocNearBg.tilePositionX = cam.scrollX * 0.2;
+    }
+
+    interactWithPet() {
+        // Find if we have any GOLDFISH or similar to feed
+        // For simplicity, any fish component works as food for now
+        const foodId = "MUTANT_SCALE"; // Default food
+        if (this.gameState.hasItem(foodId, 1)) {
+            this.gameState.removeItem(foodId, 1);
+            this.gameState.pet.friendship += 10;
+
+            this.effectManager.showFloatingText(this.blackDuck.x, this.blackDuck.y - 50, "YUM! ❤️", "#ff00ff");
+            this.soundManager.play("buy"); // Use buy sound as a placeholder for eating
+
+            console.log(`[Pet] Friendship increased: ${this.gameState.pet.friendship}`);
+
+            // Happy bounce for the duck
+            this.tweens.add({
+                targets: this.blackDuck,
+                y: this.blackDuck.y - 15,
+                duration: 100,
+                yoyo: true,
+                ease: "Sine.easeOut"
+            });
+        } else {
+            this.effectManager.showFloatingText(this.player.x, this.player.y - 50, "NO FOOD!", "#ff4444");
         }
     }
     castBobber(chargeRatio) {
@@ -828,7 +1153,9 @@ export class GameScene extends Phaser.Scene {
         let rodY = this.player.y - 20;
         const offsetsData = this.cache.json.get("player_offsets");
         if (offsetsData && offsetsData.rodOffsets) {
-            const offset = offsetsData.rodOffsets[2] || offsetsData.rodOffsets[0]; // Cast frame is frame 2
+            // Use current frame index for accurate bobber spawn position
+            const currentFrameIdx = parseInt(this.player.frame.name) || 0;
+            const offset = offsetsData.rodOffsets[currentFrameIdx] || offsetsData.rodOffsets[0];
             rodX = this.player.x + (offset.x * this.player.scaleX * this.player.facing);
             rodY = this.player.y + (offset.y * this.player.scaleY);
         }
@@ -857,13 +1184,11 @@ export class GameScene extends Phaser.Scene {
         }
 
         if (this.bobber) {
-            // First, process the catch if there is a fish
             const caughtFish = this.bobber.hookedFish;
             if (caughtFish) {
                 this.catchFish(caughtFish);
             }
 
-            // Explicitly clean up to prevent ghosts
             this.bobber.hookedFish = null;
             this.bobber.destroy();
             this.bobber = null;
@@ -873,49 +1198,53 @@ export class GameScene extends Phaser.Scene {
     catchFish(fish) {
         if (!fish || !fish.active) return;
 
+        // 1. Update GameState (Encyclopedia & Inventory)
+        const fishInfo = this.dataManager.getFish(fish.typeKey);
+        if (fishInfo) {
+            const isNew = this.gameState.discoverFish(fish.typeKey);
+            if (isNew) {
+                console.log(`[Encyclopedia] New Discovery: ${fishInfo.name}`);
+                this.effectManager.showFloatingText(this.player.x, this.player.y - 60, "NEW DISCOVERY!", "#ff00ff");
+            }
+
+            this.gameState.addItem(fishInfo.component, 1);
+            this.gameState.addRecentCatch(fish.typeKey);
+            this.effectManager.showFloatingText(this.player.x, this.player.y - 85, `+1 ${fishInfo.componentName}`, "#00ffff");
+        }
+
         // Increment global stats
         this.fishCaught += 1;
         this.money += fish.value;
 
-        // Visual/Audio effects and cleanup handled after
         const px = this.player.x;
         const py = this.player.y - 40;
 
-        // Explicitly clear bobber reference from fish to avoid "following" during destruction
         if (this.bobber && this.bobber.hookedFish === fish) {
             this.bobber.hookedFish = null;
         }
 
         if (this.effectManager) {
-            // Splash at water surface
-            this.effectManager.createSplash(this.bobber.x, GameConfig.World.WATER_LEVEL);
-
-            // Sparkling splash at player
+            this.effectManager.createSplash(this.bobber ? this.bobber.x : px, GameConfig.World.WATER_LEVEL);
             this.effectManager.createSpark(px, py);
-
-            // Floating text rewards
             this.effectManager.showFloatingText(px, py - 10, "+1 FISH", "#00ff00");
             this.effectManager.showFloatingText(px, py - 35, `+$${fish.value}`, "#ffff00");
         }
 
         if (this.soundManager) {
             this.soundManager.play("splash");
-            // If buy doesn't exist, we can just play coin or splash
             if (this.cache.audio.exists("buy")) {
                 this.soundManager.play("buy");
             }
         }
 
-        // Happy bounce animation for the player
         this.tweens.add({
             targets: this.player,
-            y: this.player.y - 30, // jump up
+            y: this.player.y - 30,
             duration: 150,
             yoyo: true,
             ease: 'Sine.easeOut'
         });
 
-        // Finally, destroy the caught fish
         fish.destroy();
     }
 }
