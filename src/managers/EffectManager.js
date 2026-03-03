@@ -81,6 +81,15 @@ export class EffectManager {
         }
         */
 
+        if (!this.scene.anims.exists("trading-boat-hq-idle")) {
+            this.scene.anims.create({
+                key: "trading-boat-hq-idle",
+                frames: this.scene.anims.generateFrameNumbers("trading_outpost", { start: 0, end: 23 }),
+                frameRate: 12,
+                repeat: -1
+            });
+        }
+
         // Particle Managers (Disabled for safety)
         /*
         this.sparkEmitter = this.scene.add.particles(0, 0, "atlas", {

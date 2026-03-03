@@ -95,7 +95,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
                     // Release the bobber at Image 11 (Index 10)
                     if (currentFrame === 10 && !this.bobberReleased) {
-                        this.scene.castBobber(this.scene.pendingPower);
+                        console.log(`[PLAYER-THROW] Dist: ${this.scene.pendingDist}, Power: ${this.scene.pendingPower}`);
+                        this.scene.castBobber(this.scene.pendingDist, this.scene.pendingPower);
                         this.bobberReleased = true;
                     }
                 } else {

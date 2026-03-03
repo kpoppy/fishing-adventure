@@ -29,15 +29,17 @@ export class FishManager {
     }
 
     spawnRandomFish(isInitial = false) {
-        // Randomly choose type based on probability (simple random for now)
-        const types = Object.keys(GameConfig.Fish);
-        const typeKey = types[Math.floor(Math.random() * types.length)];
-        const config = GameConfig.Fish[typeKey];
+        // DataManager에서 모든 물고기 데이터 가져오기
+        const allFish = this.scene.dataManager.getAllFish();
+        if (allFish.length === 0) return;
+
+        const fishData = allFish[Math.floor(Math.random() * allFish.length)];
+        const typeKey = fishData.id;
 
         // Determine Y based on depth config
         // Depth is relative to WATER_LEVEL
-        const depthMin = config.depth[0];
-        const depthMax = config.depth[1];
+        const depthMin = fishData.depth[0];
+        const depthMax = fishData.depth[1];
 
         // Random Y in range
         const y = GameConfig.World.WATER_LEVEL + depthMin + Math.random() * (depthMax - depthMin);

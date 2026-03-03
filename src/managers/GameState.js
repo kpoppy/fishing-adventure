@@ -31,7 +31,24 @@ export class GameState {
         // Pet (Black Duck) State
         this.pet = {
             friendship: 0,
-            level: 1
+            level: 1,
+            hunger: 100,
+            maxHunger: 100,
+            lastInteractionTime: 0
+        };
+
+        // --- Survival Stats ---
+        this.survival = {
+            hp: 100,            // Health Points
+            maxHp: 100,
+            hunger: 100,        // Hunger (Seesaw with HP)
+            maxHunger: 100,
+            fuel: 100,          // Fuel for the boat
+            maxFuel: 100,
+            radiation: 0,       // Accumulated Radiation
+            maxRadiation: 100,
+            sanity: 100,        // Mental State
+            maxSanity: 100
         };
 
         GameState.instance = this;
@@ -82,10 +99,68 @@ export class GameState {
     upgradeBoat(stat) {
         if (this.upgrades.hasOwnProperty(stat)) {
             this.upgrades[stat]++;
+
+            // 업그레이드에 따른 최대 스탯 확장
+            if (stat === 'armor') {
+                this.survival.maxHp = 100 + (this.upgrades.armor * 20);
+                this.survival.hp = Math.min(this.survival.hp + 20, this.survival.maxHp);
+            }
+            if (stat === 'speed') {
+                this.survival.maxFuel = 100 + (this.upgrades.speed * 20);
+                this.survival.fuel = Math.min(this.survival.fuel + 20, this.survival.maxFuel);
+            }
+
             console.log(`[GameState] Boat ${stat} upgraded to level ${this.upgrades[stat]}`);
             return true;
         }
         return false;
+    }
+
+    // --- Survival Stat Logic ---
+    updateSurvivalStats(delta, isMoving = false) {
+        // Delta is in ms (from Phaser update)
+        const seconds = delta / 1000;
+
+        // 1. Hunger (Gulp) decreases over time
+        // Base rate: 1 unit per 10 seconds
+        const hungerDecay = 0.1 * seconds;
+        this.survival.hunger = Math.max(0, this.survival.hunger - hungerDecay);
+
+        // 2. Fuel decreases when moving
+        if (isMoving) {
+            // Base consumption: 0.5 units per second
+            // Efficiency improves with speed upgrade
+            const efficiency = 1.0 - (this.upgrades.speed * 0.05); // 5% improvement per level
+            const fuelDecay = 0.5 * seconds * efficiency;
+            this.survival.fuel = Math.max(0, this.survival.fuel - fuelDecay);
+        }
+
+        // 3. HP Logic
+        if (this.survival.hunger <= 0) {
+            // Starvation: lose 1 HP per 2 seconds
+            this.survival.hp = Math.max(0, this.survival.hp - (0.5 * seconds));
+        }
+
+        // 4. Radiation Logic (Placeholder for depth-based)
+        // Radiation resist reduces gain
+        const radResistFactor = Math.max(0.1, 1.0 - (this.upgrades.radResist * 0.15));
+        // Only gain if in radioactive zone (logic to be in Scene)
+    }
+
+    consumeFuel(amount) {
+        this.survival.fuel = Math.max(0, this.survival.fuel - amount);
+    }
+
+    restoreFuel(amount) {
+        this.survival.fuel = Math.min(this.survival.maxFuel, this.survival.fuel + amount);
+    }
+
+    restoreHP(amount) {
+        this.survival.hp = Math.min(this.survival.maxHp, this.survival.hp + amount);
+    }
+
+    feed(amount) {
+        this.survival.hunger = Math.min(this.survival.maxHunger, this.survival.hunger + amount);
     }
 
     // --- Scenario ---

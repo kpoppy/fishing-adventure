@@ -180,6 +180,63 @@ body {
   }
 }
 
+/* Survival Bars Layout */
+.survival-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 5px 0;
+  width: 140px;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-label {
+  font-size: 9px;
+  color: #fff;
+  width: 32px;
+  text-shadow: 1px 1px 0 #000;
+  font-weight: bold;
+}
+
+.bar-container {
+  flex-grow: 1;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  transition: width 0.3s ease-out;
+}
+
+.hp-fill {
+  background-color: #ff3344;
+  box-shadow: 0 0 5px #ff3344;
+}
+
+.hunger-fill {
+  background-color: #ffaa00;
+  box-shadow: 0 0 5px #ffaa00;
+}
+
+.fuel-fill {
+  background-color: #ffee00;
+  box-shadow: 0 0 5px #ffee00;
+}
+
+.rad-fill {
+  background-color: #33ff44;
+  box-shadow: 0 0 5px #33ff44;
+}
+
 .controls-hint {
   position: absolute;
   bottom: -30px;
@@ -189,7 +246,198 @@ body {
   font-size: 14px;
 }
 
-/* UI Overlays (Inventory, Encyclopedia) */
+/* Minimap */
+#minimap-container {
+  width: 100px;
+  height: 60px;
+  background: rgba(0, 0, 0, 0.7);
+  background-image:
+    linear-gradient(rgba(79, 195, 247, 0.2) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79, 195, 247, 0.2) 1px, transparent 1px);
+  background-size: 20px 20px;
+  border: 2px solid #4fc3f7;
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+#player-dot {
+  width: 6px;
+  height: 6px;
+  background: #ffec00;
+  border-radius: 50%;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 8px #ffec00;
+  z-index: 5;
+}
+
+.minimap-point {
+  width: 4px;
+  height: 4px;
+  position: absolute;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+}
+
+/* World Map Overlay */
+.map-overlay {
+  background: rgba(0, 0, 0, 0.6) !important;
+  /* 살짝 어둡게 */
+  border: none !important;
+  /* 테두리 제거 */
+  box-shadow: none !important;
+  /* 그림자 제거 */
+  pointer-events: none;
+  top: 5% !important;
+  transform: translate(-50%, 0) !important;
+  width: 800px !important;
+  height: 480px !important;
+  overflow: hidden !important;
+  backdrop-filter: none !important;
+  /* 블러 제거 */
+  max-height: none !important;
+  /* Fixed: Prevents height crushing to 400px from game-overlay */
+}
+
+.map-overlay h2 {
+  display: none;
+  /* 제목 제거하여 공간 확보 */
+}
+
+.map-overlay * {
+  pointer-events: auto;
+  /* 내부 요소는 상호작용 가능 (툴팁 등) */
+}
+
+#world-map-container {
+  width: 800px;
+  height: 480px;
+  background: rgba(0, 0, 0, 0) !important;
+  /* 완전 투명 */
+  border: none !important;
+  position: relative;
+  margin: 0 auto;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+#world-map-content {
+  opacity: 0.8;
+  /* 전체 지도 요소 사알짝 투명 */
+  background-image:
+    linear-gradient(rgba(79, 195, 247, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79, 195, 247, 0.1) 1px, transparent 1px);
+  background-size: 100px 100px;
+  /* 배경 격자 추가 - 이동 가시성 확보 */
+  width: 12000px !important;
+  height: 2400px !important;
+}
+
+#map-player-icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: #ffec00;
+  font-size: 32px;
+  /* Even larger icon for better map presence */
+  text-shadow: 0 0 15px rgba(255, 236, 0, 0.8), 0 0 5px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  transition: transform 0.05s linear;
+  /* Faster transition for map movement */
+}
+
+.map-point {
+  position: absolute;
+  font-size: 20px;
+  cursor: help;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
+}
+
+.map-point:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px;
+  background: #000;
+  color: #fff;
+  font-size: 10px;
+  white-space: nowrap;
+  border: 1px solid #4fc3f7;
+}
+
+/* World Map Scale Legend */
+.map-scale-legend {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(79, 195, 247, 0.3);
+  pointer-events: none;
+}
+
+.scale-bar {
+  width: 80px;
+  /* 1.0km at scale (Map is 12000px wide for 150000 world units) */
+  height: 6px;
+  border: 1px solid #fff;
+  border-top: none;
+  position: relative;
+}
+
+.scale-bar::before,
+.scale-bar::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  width: 1px;
+  height: 6px;
+  background: #fff;
+}
+
+.scale-bar::before {
+  left: -1px;
+}
+
+.scale-bar::after {
+  right: -1px;
+}
+
+.scale-text {
+  font-size: 10px;
+  color: #fff;
+  text-shadow: 1px 1px 2px #000;
+}
+
+/* Map Point Label */
+.map-point-label {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  text-shadow: 1px 1px 1px #000;
+}
+
 .game-overlay {
   position: absolute;
   top: 50%;
@@ -336,4 +584,184 @@ body {
   font-size: 11px;
   color: #88ccee;
   margin-top: 3px;
+}
+
+/* Visual Novel Trading Post UI Enhancement */
+#shop-ui {
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.9), 0 0 20px var(--gold) !important;
+  animation: vnSlideIn 0.3s ease-out forwards;
+}
+
+@keyframes vnSlideIn {
+  from {
+    transform: translate(-50%, -45%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+  }
+}
+
+.vn-name-plate {
+  position: absolute;
+  top: -20px;
+  left: 20px;
+  background: var(--gold);
+  color: #000;
+  padding: 5px 20px;
+  font-weight: 900;
+  font-size: 18px;
+  border-radius: 4px;
+  box-shadow: 0 0 15px var(--gold);
+  z-index: 60;
+  text-transform: uppercase;
+  transform: skewX(-15deg);
+}
+
+.vn-name-plate span {
+  display: block;
+  transform: skewX(15deg);
+}
+
+.vn-dialog-text {
+  min-height: 60px;
+  position: relative;
+}
+
+.vn-dialog-text::after {
+  content: '▼';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  color: var(--gold);
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+
+  0%,
+  100% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.vn-interaction-area {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold) rgba(0, 0, 0, 0.5);
+}
+
+.vn-interaction-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.vn-interaction-area::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.vn-interaction-area::-webkit-scrollbar-thumb {
+  background-color: var(--gold);
+  border-radius: 10px;
+}
+
+/* General Purpose VN Dialogue Overlay */
+.vn-dialogue-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  z-index: 150;
+  background: rgba(0, 0, 0, 0.4);
+  pointer-events: auto;
+  padding-bottom: 40px;
+}
+
+.vn-portrait-container {
+  position: absolute;
+  bottom: 160px;
+  left: 100px;
+  width: 300px;
+  height: 400px;
+  display: flex;
+  align-items: flex-end;
+  pointer-events: none;
+  animation: portraitSlideIn 0.5s ease-out;
+}
+
+.vn-portrait-container img {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 0 20px rgba(0, 0, 0, 0.8));
+}
+
+@keyframes portraitSlideIn {
+  from {
+    transform: translateX(-50px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.vn-dialogue-box {
+  position: relative;
+  width: 800px;
+  max-width: 90%;
+  height: 160px;
+  background: rgba(15, 15, 20, 0.95);
+  border: 2px solid var(--gold);
+  border-left: 6px solid var(--gold);
+  border-radius: 4px;
+  padding: 30px;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  animation: vnBoxSlideUp 0.3s ease-out;
+}
+
+@keyframes vnBoxSlideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.vn-text-content {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #eee;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.vn-button-container {
+  display: flex;
+  gap: 15px;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.vn-button-container .modal-btn {
+  margin-top: 0;
+  padding: 8px 20px;
+  font-size: 14px;
 }

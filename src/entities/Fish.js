@@ -11,16 +11,30 @@ export class Fish extends Phaser.Physics.Arcade.Sprite {
         super(scene, x, y, texKey);
         this.scene = scene;
         this.typeKey = typeKey || "GOLDFISH";
-        const config = GameConfig.Fish[this.typeKey] || GameConfig.Fish.GOLDFISH;
+        const fishData = scene.dataManager.getFish(this.typeKey) || scene.dataManager.getFish("GOLDFISH");
 
-        this.hp = config.hp;
-        this.value = config.price;
-        this.moveSpeed = config.speed;
-        this.color = config.color;
+        this.hp = fishData.hp;
+        this.value = fishData.price;
+        this.moveSpeed = fishData.speed;
+        this.color = fishData.color;
+        this.isIdentified = false; // 기본값은 정체 불명 (그림자 상태)
+
+        // 텍스처 결정 (데이터에 명시된 image 키가 있으면 우선 사용)
+        if (fishData.image && scene.textures.exists(fishData.image)) {
+            texKey = fishData.image;
+            this.setTexture(texKey);
+        }
+
+        // 설정된 프레임 적용
+        if (fishData.frame !== undefined) {
+            this.setFrame(fishData.frame);
+        }
 
         // Slightly increase the display size to make the pixel art visible
         this.setDisplaySize(48, 48);
-        // Removed setTint(this.color) to show original pixel art colors
+
+        // 초기 시각 효과 적용 (그림자 모드)
+        this.applyShadowVisuals();
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
@@ -64,6 +78,32 @@ export class Fish extends Phaser.Physics.Arcade.Sprite {
 
         // Bob up and down slightly
         this.setVelocityY(Math.sin(time * 0.002) * 10);
+
+        // 상태 유지를 위해 주기적으로 비주얼 체크 (필요한 경우)
+        if (!this.isIdentified) {
+            this.applyShadowVisuals();
+        }
+    }
+
+    applyShadowVisuals() {
+        if (this.isIdentified) return;
+
+        // 정체를 알 수 없는 그림자 효과: 검은색 틴트 + 약간의 투명도
+        this.setTint(0x000000);
+        this.setAlpha(0.6 + Math.random() * 0.2); // 깊이에 따라 다르게 보일 수 있도록 약간의 랜덤성
+    }
+
+    revealIdentity() {
+        if (this.isIdentified) return;
+
+        this.isIdentified = true;
+        this.clearTint(); // 틴트 제거로 원래 색상 복구
+        this.setAlpha(1.0); // 완전히 선명하게 표시
+
+        // 정체 공개 연출 (반짝이는 효과 등 추가 가능)
+        if (this.scene.effectManager) {
+            this.scene.effectManager.flashSprite(this, 0xffffff, 300);
+        }
     }
 
     getMouthPosition() {
