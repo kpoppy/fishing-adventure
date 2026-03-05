@@ -495,6 +495,37 @@ export class UIManager {
                 <div class="name">${name}</div>
                 <div class="count">${t("owned_count")}: ${count}</div>
             `;
+
+            // Check if item is usable
+            const edibleItems = ["MUTANT_SCALE", "TOXIC_FIN", "RATIONS"];
+            const usableItems = ["FUEL_CELL", "REPAIR_KIT", "METAL_SCRAP", "RAD_ENZYME", "PURIFIED_WATER"];
+
+            if (edibleItems.includes(id) || usableItems.includes(id)) {
+                const actionBtn = document.createElement("button");
+                actionBtn.className = "ui-button";
+                actionBtn.style.marginTop = "5px";
+                actionBtn.style.padding = "4px 8px";
+                actionBtn.style.fontSize = "10px";
+                actionBtn.textContent = edibleItems.includes(id) ? t("eat") : t("use");
+
+                actionBtn.onclick = () => {
+                    const result = gameState.useItem(id);
+                    if (result) {
+                        // Refresh UI
+                        this.updateInventory(gameState, dataManager);
+                        if (this.gameScene) {
+                            const player = this.gameScene.player;
+                            this.gameScene.effectManager.showFloatingText(
+                                player.x, 200,
+                                t(result.message),
+                                "#00ff00"
+                            );
+                        }
+                    }
+                };
+                itemDiv.appendChild(actionBtn);
+            }
+
             this.inventoryList.appendChild(itemDiv);
         });
     }
@@ -916,7 +947,8 @@ export class UIManager {
         const shopItems = [
             { id: "FUEL", name: t("item_fuel_name"), desc: t("item_fuel_desc"), cost: 50, action: () => { gameState.restoreFuel(30); } },
             { id: "REPAIR_KIT", name: t("item_repair_name"), desc: t("item_repair_desc"), cost: 100, action: () => { gameState.restoreHP(20); } },
-            { id: "RATION", name: t("item_ration_name"), desc: t("item_ration_desc"), cost: 30, action: () => { gameState.feed(40); } }
+            { id: "RATION", name: t("item_ration_name"), desc: t("item_ration_desc"), cost: 30, action: () => { gameState.feed(40); } },
+            { id: "WATER", name: t("item_water_name"), desc: t("item_water_desc"), cost: 60, action: () => { gameState.addItem("PURIFIED_WATER", 1); } }
         ];
 
         shopItems.forEach(item => {

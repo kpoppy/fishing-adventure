@@ -52,7 +52,8 @@ export class Bobber extends Phaser.Physics.Arcade.Sprite {
         const maxDepth = 1500;
         this.targetDepth = minDepth + (maxDepth - minDepth) * this.strengthRatio;
 
-        this.hookedFish = null; // Explicitly initialize
+        this.hookedFish = null;
+        this.hookedDebris = null;
     }
 
     update(time, delta) {

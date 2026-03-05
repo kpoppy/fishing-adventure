@@ -103,7 +103,7 @@ export class GameScene extends Phaser.Scene {
         // Global Sky/Atmosphere (Saved as property for color animation)
         // Global Sky/Atmosphere (Bright Blue for Day)
         // Extended upward to support negative virtualMapY (infinite North/Up movement)
-        this.skyRect = this.add.rectangle(VIEW_W / 2, -1050000, VIEW_W * 20, 1050000 + GameConfig.World.WATER_LEVEL, 0x88ccff).setOrigin(0.5, 0).setDepth(DEPTH.BG - 1).setScrollFactor(0, 1);
+        this.skyRect = this.add.rectangle(VIEW_W / 2, -1050000, VIEW_W * 20, 1050000 + GameConfig.World.WATER_LEVEL, GameConfig.World.SKY_COLOR).setOrigin(0.5, 0).setDepth(DEPTH.BG - 1).setScrollFactor(0, 1);
 
         // 3-Layer Parallax Background (Farthest to Closest)
         // 1. Farthest (Sky, Moon) - Factor 0.05
@@ -123,7 +123,7 @@ export class GameScene extends Phaser.Scene {
 
         // Efficient water rectangle: follows camera but stays at water level
         // Massive height to support deep infinite diving
-        this.waterRect = this.add.rectangle(VIEW_W / 2, GameConfig.World.WATER_LEVEL, 8000, 2100000, 0x88ccff, 1.0).setOrigin(0.5, 0).setDepth(DEPTH.BG_DECO).setScrollFactor(0, 1);
+        this.waterRect = this.add.rectangle(VIEW_W / 2, GameConfig.World.WATER_LEVEL, 8000, 2100000, GameConfig.World.WATER_COLOR, 1.0).setOrigin(0.5, 0).setDepth(DEPTH.BG_DECO).setScrollFactor(0, 1);
 
         // Toxic Sea Waves (Top layer of the water - Background part)
         this.seaWaves = this.add.tileSprite(VIEW_W / 2, GameConfig.World.WATER_LEVEL, 8000, 64, "sea_waves").setOrigin(0.5, 0.5).setDepth(DEPTH.BG_DECO + 1).setScrollFactor(0, 1);
@@ -606,7 +606,14 @@ export class GameScene extends Phaser.Scene {
     }
 
     update(time, delta) {
-        if (this.finished) return;
+        if (this.finished || this.isGameOver) {
+            // Allow restart even if game is over
+            if (Phaser.Input.Keyboard.JustDown(this.keys.R)) {
+                this.gameState.reset();
+                this.scene.restart();
+            }
+            return;
+        }
 
         this.handleInput(delta);
         this.updateCameraZoom(delta);
@@ -614,7 +621,37 @@ export class GameScene extends Phaser.Scene {
 
         // Survival Stats Update
         const isMoving = this.boat && this.boat.body && (Math.abs(this.boat.body.velocity.x) > 10 || Math.abs(this.boat.body.velocity.y) > 10);
-        this.gameState.updateSurvivalStats(delta, isMoving);
+        const survivalStatus = this.gameState.updateSurvivalStats(delta, isMoving);
+
+        // --- Safe Zone Passive Purification ---
+        if (this.oilRig) {
+            const distToRig = Phaser.Math.Distance.Between(this.boat.x, this.boat.y, this.oilRig.x, this.oilRig.y);
+            if (distToRig < 800) {
+                // Purify 0.5 radiation per second when near Oil Rig
+                this.gameState.purifyRadiation(0.5 * (delta / 1000));
+            }
+        }
+
+        if (survivalStatus.gameOver) {
+            this.triggerGameOver(survivalStatus.reason);
+            return;
+        }
+
+        // --- Radiation Visual Effects ---
+        const rad = this.gameState.survival.radiation;
+        if (rad > 50) {
+            // Apply noise/flicker effect
+            const intensity = (rad - 50) / 100; // 0 to 0.5
+            const flicker = Math.random() < (intensity * 0.1);
+            if (flicker) {
+                this.cameras.main.flash(50, 255, 255, 255, true);
+            }
+
+            // Show warning message periodically
+            if (rad > 80 && Math.floor(time / 1000) % 5 === 0) {
+                this.effectManager.showFloatingText(this.boat.x, 150, languageManager.t("rad_warning"), "#ff0000");
+            }
+        }
 
         if (this.uiManager) {
             const depth = (this.bobber && this.bobber.active && this.bobber.y > GameConfig.World.WATER_LEVEL)
@@ -649,6 +686,7 @@ export class GameScene extends Phaser.Scene {
         // Check Scenario/Debris Proximity
         this.checkScenarioProximity();
         this.checkDebrisInteraction();
+        this.checkBobberDebrisCollision();
         this.checkPetInteraction(); // 펫 상호작용은 나중에 처리 (우선순위)
 
         // Oil Rig Bobbing
@@ -667,6 +705,21 @@ export class GameScene extends Phaser.Scene {
                         text: "거래를 제안한다",
                         onClick: () => {
                             this.uiManager.toggleShop(this.gameState, this.dataManager);
+                        }
+                    },
+                    {
+                        text: languageManager.t("purify_service"),
+                        onClick: () => {
+                            const cost = 500;
+                            if (this.gameState.money >= cost) {
+                                this.gameState.money -= cost;
+                                this.gameState.purifyRadiation(100);
+                                this.effectManager.showFloatingText(this.boat.x, this.boat.y - 120, languageManager.t("purify_confirm"), "#00ffff");
+                                this.soundManager.play("splash");
+                                this.saveManager.save(this.gameState);
+                            } else {
+                                this.effectManager.showFloatingText(this.boat.x, this.boat.y - 120, "NOT ENOUGH MONEY!", "#ff0000");
+                            }
                         }
                     },
                     {
@@ -707,6 +760,11 @@ export class GameScene extends Phaser.Scene {
             // Let bobber handle its own buoyancy and physics
             this.bobber.isAdjusting = (this.keys.W.isDown || this.keys.S.isDown);
             this.bobber.update(time, delta);
+
+            if (this.bobber.hookedDebris) {
+                this.bobber.hookedDebris.x = this.bobber.x;
+                this.bobber.hookedDebris.y = this.bobber.y;
+            }
 
             // Draw Fishing Line (Dynamic based on depth)
             const waterLevel = GameConfig.World.WATER_LEVEL;
@@ -852,7 +910,7 @@ export class GameScene extends Phaser.Scene {
 
             // 2. Sky Color: Interpolate between Day, Night, and Abyss
             // Day: 0x88ccff, Night: 0x000022, Abyss: 0x000000
-            const daySky = Phaser.Display.Color.ValueToColor(0x88ccff);
+            const daySky = Phaser.Display.Color.ValueToColor(GameConfig.World.SKY_COLOR);
             const nightSky = Phaser.Display.Color.ValueToColor(0x000022);
             const abyssSky = Phaser.Display.Color.ValueToColor(0x000000);
 
@@ -922,11 +980,20 @@ export class GameScene extends Phaser.Scene {
 
             // 거래소 근처 (튜토리얼/안내용 고철)
             { x: -1200, y: 0, type: "debris_scraps", item: "METAL_SCRAP", amount: 5, desc: "오염된 고철" },
-            { x: -800, y: 0, type: "debris_tech", item: "OLD_SENSOR", amount: 1, desc: "망가진 센서" }
+            { x: -800, y: 0, type: "debris_tech", item: "OLD_SENSOR", amount: 1, desc: "망가진 센서" },
+
+            // 수중 아이템 (물속에 잠겨 있음)
+            { x: 1000, y: 200, depth: 300, type: "debris_scraps", item: "METAL_SCRAP", amount: 3, desc: "수중 잔해" },
+            { x: 5000, y: 500, depth: 800, type: "debris_tech", item: "FUEL_CELL", amount: 1, desc: "방전된 연료 전지" },
+            { x: 12000, y: 1500, depth: 2500, type: "debris_bio", item: "RAD_ENZYME", amount: 1, desc: "심해 생물 정해" }
         ];
 
+        const waterLevel = GameConfig.World.WATER_LEVEL;
+
         debrisLocations.forEach(loc => {
-            const sprite = this.add.sprite(loc.x, GameConfig.World.WATER_LEVEL + 20, loc.type);
+            // loc.depth가 있으면 해당 수심, 없으면 수면 근처
+            const spawnY = loc.depth ? (waterLevel + loc.depth) : (waterLevel + 20);
+            const sprite = this.add.sprite(loc.x, spawnY, loc.type);
             // 스프라이트 시트에서 랜덤 프레임 선택 (이미지마다 개수가 다를 수 있으므로 안전하게 처리)
             const frameCount = sprite.texture.frameTotal - 1;
             if (frameCount > 0) {
@@ -956,7 +1023,12 @@ export class GameScene extends Phaser.Scene {
         let nearestDebris = null;
         let minDist = 400; // 수집 가능 거리 확장 (시나리오 트리거와 동일)
 
+        const waterLevel = GameConfig.World.WATER_LEVEL;
+
         this.debrisGroup.getChildren().forEach(debris => {
+            // 수면 근처(부유물)만 [F]로 획득 가능하도록 필터링
+            if (debris.y > waterLevel + 50) return;
+
             const distX = Math.abs(this.player.x - debris.x);
             const distY = Math.abs(this.virtualMapY - debris.virtualY);
             const dist = Math.sqrt(distX * distX + distY * distY);
@@ -1006,9 +1078,19 @@ export class GameScene extends Phaser.Scene {
 
     collectDebris(debris) {
         const data = debris.itemData;
+        const t = (k) => languageManager.t(k);
         this.gameState.addItem(data.item, data.amount);
 
-        this.effectManager.showFloatingText(debris.x, 300, `+${data.amount} ${data.item}`, "#ffff00");
+        // 즉시 회복 로직 추가
+        if (data.item === "METAL_SCRAP") {
+            this.gameState.restoreHP(2 * data.amount);
+            this.effectManager.showFloatingText(debris.x, 250, t("restored_hp"), "#00ff00");
+        } else if (data.item === "FUEL_CELL") {
+            this.gameState.restoreFuel(30);
+            this.effectManager.showFloatingText(debris.x, 250, t("restored_fuel"), "#00ffff");
+        }
+
+        this.effectManager.showFloatingText(debris.x, 300, `+${data.amount} ${t(data.item)}`, "#ffff00");
         this.soundManager.play("buy"); // 임시 수집 사운드
 
         // 수집 애니메이션 후 제거
@@ -1428,8 +1510,9 @@ export class GameScene extends Phaser.Scene {
         }
 
         // 4. Boat Control (Free Movement / WASD Mapping)
-        // Movement is allowed only if debug is off and no menu is blocking input
-        if (!this.physics.world.drawDebug && !isAnyMenuOpen) {
+        // Movement is allowed only if debug is off, no menu is blocking input, and fuel is available
+        const hasFuel = this.gameState.survival.fuel > 0;
+        if (!this.physics.world.drawDebug && !isAnyMenuOpen && hasFuel) {
             let boatSpeed = GameConfig.Player.BOAT_SPEED;
             if (this.gameState.upgrades.speed) boatSpeed += this.gameState.upgrades.speed * 30;
 
@@ -1569,6 +1652,7 @@ export class GameScene extends Phaser.Scene {
 
 
             if (this.input.keyboard.checkDown(this.keys.R, 1000)) {
+                this.gameState.reset();
                 this.scene.restart();
             }
 
@@ -1713,6 +1797,31 @@ export class GameScene extends Phaser.Scene {
             this.effectManager.showFloatingText(this.player.x, this.player.y - 50, "NO FOOD!", "#ff4444");
         }
     }
+    checkBobberDebrisCollision() {
+        if (!this.bobber || !this.bobber.active || !this.bobber.inWater || this.bobber.hookedFish || this.bobber.hookedDebris) return;
+
+        const waterLevel = GameConfig.World.WATER_LEVEL;
+        const catchRange = 40;
+
+        this.debrisGroup.getChildren().forEach(debris => {
+            // 수중 아이템만 낚시로 획득 가능
+            if (debris.y <= waterLevel + 50) return;
+
+            const dist = Phaser.Math.Distance.Between(this.bobber.x, this.bobber.y, debris.x, debris.y);
+            if (dist < catchRange) {
+                console.log(`[Fishing] Debris hooked: ${debris.itemData.item}`);
+                this.bobber.hookedDebris = debris;
+
+                // 시각 효과
+                this.effectManager.showFloatingText(debris.x, debris.y - 20, "HIT!", "#ffcc00");
+                this.soundManager.play("splash");
+
+                // 기존 트윈 정지 (둥둥 떠있는 효과)
+                this.tweens.killTweensOf(debris);
+            }
+        });
+    }
+
     castBobber(distRatio, strengthRatio) {
         console.log(`[CAST] Dist: ${distRatio}, Power: ${strengthRatio}`);
         // Guard against NaN
@@ -1753,7 +1862,13 @@ export class GameScene extends Phaser.Scene {
                 this.catchFish(caughtFish);
             }
 
+            const caughtDebris = this.bobber.hookedDebris;
+            if (caughtDebris) {
+                this.collectDebris(caughtDebris);
+            }
+
             this.bobber.hookedFish = null;
+            this.bobber.hookedDebris = null;
             this.bobber.destroy();
             this.bobber = null;
         }
@@ -1834,5 +1949,49 @@ export class GameScene extends Phaser.Scene {
             this.effectManager.showFloatingText(pos.x, 300, `JUMPED TO: ${id.toUpperCase()}`, "#ff00ff");
             console.log(`[Debug] Jumped to ${id} at X:${pos.x}, virtualY:${pos.y}`);
         }
+    }
+
+    triggerGameOver(reasonKey) {
+        if (this.isGameOver) return;
+        this.isGameOver = true;
+
+        console.log(`[GAME OVER] Reason: ${reasonKey}`);
+        this.physics.pause();
+        this.boat.body.setVelocity(0, 0);
+        if (this.player.body) this.player.body.setVelocity(0, 0);
+
+        const t = (k) => languageManager.t(k);
+        const centerX = 400; // VIEW_W / 2 (assuming standard 800px width)
+        const centerY = 240; // VIEW_H / 2
+
+        // Black Overlay
+        const overlay = this.add.rectangle(centerX, centerY, 800, 480, 0x000000, 0.7)
+            .setScrollFactor(0)
+            .setDepth(DEPTH.HUD + 100);
+
+        // Game Over Text
+        this.add.text(centerX, centerY - 40, t("game_over"), {
+            fontSize: "48px",
+            fontFamily: "'Press Start 2P', cursive",
+            fill: "#ff0000",
+            stroke: "#000000",
+            strokeThickness: 12
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD + 101);
+
+        // Reason Text
+        this.add.text(centerX, centerY + 20, t(reasonKey), {
+            fontSize: "14px",
+            fontFamily: "'Press Start 2P', cursive",
+            fill: "#ffffff"
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD + 101);
+
+        // Restart Instruction
+        this.add.text(centerX, centerY + 80, t("press_r_restart"), {
+            fontSize: "12px",
+            fontFamily: "'Press Start 2P', cursive",
+            fill: "#aaaaaa"
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD + 101);
+
+        this.soundManager.play("splash"); // Temporary sound
     }
 }

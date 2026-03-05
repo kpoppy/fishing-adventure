@@ -144,7 +144,70 @@ export class GameState {
         // 4. Radiation Logic (Placeholder for depth-based)
         // Radiation resist reduces gain
         const radResistFactor = Math.max(0.1, 1.0 - (this.upgrades.radResist * 0.15));
-        // Only gain if in radioactive zone (logic to be in Scene)
+
+        // Radiation Penalty: If radiation > 80%, lose HP gradually
+        if (this.survival.radiation > 80) {
+            // Severe radiation: lose 1 HP per 1 second
+            this.survival.hp = Math.max(0, this.survival.hp - (1.0 * seconds));
+        }
+
+        // --- Game Over Checks ---
+        if (this.survival.hp <= 0) {
+            return { gameOver: true, reason: "reason_hp" };
+        }
+        if (this.survival.hunger <= 0) {
+            return { gameOver: true, reason: "reason_hunger" };
+        }
+        if (this.survival.radiation >= this.survival.maxRadiation) {
+            return { gameOver: true, reason: "reason_rad" };
+        }
+
+        return { gameOver: false };
+    }
+
+    useItem(id) {
+        if (!this.hasItem(id, 1)) return null;
+
+        let result = { type: null, amount: 0, message: "" };
+
+        // Item Effects Logic
+        switch (id) {
+            case "RATIONS":
+                this.feed(40);
+                result = { type: "hunger", amount: 40, message: "restored_hunger" };
+                break;
+            case "FUEL_CELL":
+                this.restoreFuel(30);
+                result = { type: "fuel", amount: 30, message: "restored_fuel" };
+                break;
+            case "REPAIR_KIT":
+                this.restoreHP(20);
+                result = { type: "hp", amount: 20, message: "restored_hp" };
+                break;
+            case "METAL_SCRAP":
+                this.restoreHP(5);
+                result = { type: "hp", amount: 5, message: "restored_hp" };
+                break;
+            case "MUTANT_SCALE":
+            case "TOXIC_FIN":
+                this.feed(20);
+                this.survival.radiation = Math.min(this.survival.maxRadiation, this.survival.radiation + 5);
+                result = { type: "hunger", amount: 20, message: "restored_hunger" };
+                break;
+            case "RAD_ENZYME":
+                this.purifyRadiation(30);
+                result = { type: "rad", amount: -30, message: "rad_purified" };
+                break;
+            case "PURIFIED_WATER":
+                this.purifyRadiation(10);
+                result = { type: "rad", amount: -10, message: "rad_purified" };
+                break;
+            default:
+                return null; // Not usable
+        }
+
+        this.removeItem(id, 1);
+        return result;
     }
 
     consumeFuel(amount) {
@@ -163,13 +226,43 @@ export class GameState {
         this.survival.hunger = Math.min(this.survival.maxHunger, this.survival.hunger + amount);
     }
 
-    // --- Scenario ---
-    setProgress(stage) {
-        const stages = ['GI', 'SEUNG', 'JEON', 'GYEOL'];
-        if (stages.includes(stage)) {
-            this.progress = stage;
-            console.log(`[GameState] Scenario Progress Updated: ${stage}`);
-        }
+    purifyRadiation(amount) {
+        this.survival.radiation = Math.max(0, this.survival.radiation - amount);
+    }
+
+    // --- Reset ---
+    reset() {
+        this.progress = 'GI';
+        this.inventory = {};
+        this.discoveredFish = new Set();
+        this.upgrades = {
+            speed: 0,
+            armor: 0,
+            light: 0,
+            radResist: 0
+        };
+        this.capturedFish = [];
+        this.recentCatches = [];
+        this.pet = {
+            friendship: 0,
+            level: 1,
+            hunger: 100,
+            maxHunger: 100,
+            lastInteractionTime: 0
+        };
+        this.survival = {
+            hp: 100,
+            maxHp: 100,
+            hunger: 100,
+            maxHunger: 100,
+            fuel: 100,
+            maxFuel: 100,
+            radiation: 0,
+            maxRadiation: 100,
+            sanity: 100,
+            maxSanity: 100
+        };
+        console.log("[GameState] All states reset to initial values.");
     }
 }
 

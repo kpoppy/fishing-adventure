@@ -96,6 +96,10 @@ export class LanguageManager {
                 "item_repair_desc": "선체 내구도를 20만큼 복구합니다.",
                 "item_ration_name": "전투 식량",
                 "item_ration_desc": "포만감을 40만큼 해소합니다.",
+                "item_water_name": "정화된 물",
+                "item_water_desc": "방사능을 10만큼 세척합니다.",
+                "svc_purify_name": "방사능 정밀 세척",
+                "svc_purify_desc": "선체의 모든 방사능을 제거합니다.",
 
                 // Pet Specific
                 "p_petting": "교감하기 (쓰다듬기)",
@@ -114,7 +118,25 @@ export class LanguageManager {
                 "LUMINOUS_CELL": "발광 세포",
                 "TECH_CORE": "테크 코어",
                 "OLD_SENSOR": "망가진 센서",
-                "scavenge": "수집"
+                "scavenge": "수집",
+
+                // Item Actions
+                "use": "사용",
+                "eat": "먹기",
+                "restored_hp": "내구도 회복됨!",
+                "restored_fuel": "연료 보충됨!",
+                "restored_hunger": "포만감 회복됨!",
+                "rad_purified": "방사능 세척됨!",
+                "rad_warning": "방사능 경고! 선체가 부식되고 있습니다!",
+                "rad_visual_noise": "방사능 간섭 중...",
+                "game_over": "GAME OVER",
+                "reason_hp": "선체가 파손되었습니다.",
+                "reason_hunger": "배가 고파서 더 이상 움직일 수 없습니다.",
+                "reason_rad": "방사능 수치가 치사량을 넘었습니다.",
+                "press_r_restart": "[ R ] 키를 눌러 재시작",
+                "PURIFIED_WATER": "정화된 물",
+                "purify_service": "방사능 전신 세척 ($500)",
+                "purify_confirm": "방사능이 완전히 제거되었습니다."
             },
             en: {
                 // HUD Labels
@@ -211,6 +233,10 @@ export class LanguageManager {
                 "item_repair_desc": "Restores 20 units of HP.",
                 "item_ration_name": "Field Rations",
                 "item_ration_desc": "Restores 40 units of hunger.",
+                "item_water_name": "Purified Water",
+                "item_water_desc": "Purifies 10 units of radiation.",
+                "svc_purify_name": "Radiation Deep Cleanse",
+                "svc_purify_desc": "Removes all radiation from the hull.",
 
                 // Pet Specific
                 "p_petting": "Petting",
@@ -229,7 +255,25 @@ export class LanguageManager {
                 "LUMINOUS_CELL": "Luminous Cell",
                 "TECH_CORE": "Tech Core",
                 "OLD_SENSOR": "Old Sensor",
-                "scavenge": "Scavenge"
+                "scavenge": "Scavenge",
+
+                // Item Actions
+                "use": "Use",
+                "eat": "Eat",
+                "restored_hp": "HP Restored!",
+                "restored_fuel": "Fuel Restored!",
+                "restored_hunger": "Hunger Restored!",
+                "rad_purified": "Radiation Purified!",
+                "rad_warning": "RADIATION WARNING! Hull Corroding!",
+                "rad_visual_noise": "Radiation Interference...",
+                "game_over": "GAME OVER",
+                "reason_hp": "The hull has been destroyed.",
+                "reason_hunger": "You have starved to death.",
+                "reason_rad": "Radiation levels have exceeded lethal limits.",
+                "press_r_restart": "Press [ R ] to restart",
+                "PURIFIED_WATER": "Purified Water",
+                "purify_service": "Hull Radiation Purify ($500)",
+                "purify_confirm": "Radiation has been completely removed."
             }
         };
 
