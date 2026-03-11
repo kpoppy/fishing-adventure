@@ -14,6 +14,7 @@ export class LanguageManager {
                 "buoyancy": "부력",
                 "weight": "무게",
                 "return_spd": "회수 속도",
+                "day": "일차",
 
                 // UI Headers
                 "inventory": "인벤토리 (가방)",
@@ -151,6 +152,7 @@ export class LanguageManager {
                 "buoyancy": "BUOYANCY",
                 "weight": "WEIGHT",
                 "return_spd": "RETURN SPD",
+                "day": "DAY",
 
                 // UI Headers
                 "inventory": "INVENTORY (BAG)",

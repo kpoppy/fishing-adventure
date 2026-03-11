@@ -661,16 +661,17 @@ export class GameScene extends Phaser.Scene {
             const gameTimeTotalHours = (this.worldTime * 24 + 6) % 24;
             const hours = Math.floor(gameTimeTotalHours);
             const minutes = Math.floor((gameTimeTotalHours - hours) * 60);
+            const day = Math.floor(this.time.now / this.dayDuration) + 1;
 
             this.uiManager.update({
                 depth: depth,
-                fish: this.gameState.capturedFish.length,
-                money: this.gameState.money,
-                gameTime: { hours, minutes },
+                fish: this.fishCaught,
+                money: this.money,
+                gameTime: { hours, minutes, day },
                 survival: this.gameState.survival, // Pass survival object for bars
-                buoyancy: this.bobber && this.bobber.active ? this.bobber.buoyancyK : undefined,
-                weight: this.bobber && this.bobber.active ? this.bobber.sinkWeight : undefined,
-                returnSpeed: this.bobber && this.bobber.active ? this.bobber.returnSpeed : undefined,
+                buoyancy: this.bobber ? this.bobber.buoyancyK : undefined,
+                weight: this.bobber ? this.bobber.weight : undefined,
+                returnSpeed: this.bobber ? this.bobber.returnSpeed : undefined,
                 recentCatches: this.gameState.recentCatches
             });
         }
@@ -1960,37 +1961,24 @@ export class GameScene extends Phaser.Scene {
         this.boat.body.setVelocity(0, 0);
         if (this.player.body) this.player.body.setVelocity(0, 0);
 
-        const t = (k) => languageManager.t(k);
-        const centerX = 400; // VIEW_W / 2 (assuming standard 800px width)
-        const centerY = 240; // VIEW_H / 2
+        // Show HTML Impactful Game Over
+        if (this.uiManager) {
+            this.uiManager.showActualGameOver(reasonKey);
+        }
 
-        // Black Overlay
-        const overlay = this.add.rectangle(centerX, centerY, 800, 480, 0x000000, 0.7)
-            .setScrollFactor(0)
-            .setDepth(DEPTH.HUD + 100);
-
-        // Game Over Text
-        this.add.text(centerX, centerY - 40, t("game_over"), {
-            fontSize: "48px",
-            fontFamily: "'Press Start 2P', cursive",
-            fill: "#ff0000",
-            stroke: "#000000",
-            strokeThickness: 12
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD + 101);
-
-        // Reason Text
-        this.add.text(centerX, centerY + 20, t(reasonKey), {
-            fontSize: "14px",
-            fontFamily: "'Press Start 2P', cursive",
-            fill: "#ffffff"
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD + 101);
-
-        // Restart Instruction
-        this.add.text(centerX, centerY + 80, t("press_r_restart"), {
-            fontSize: "12px",
-            fontFamily: "'Press Start 2P', cursive",
-            fill: "#aaaaaa"
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD + 101);
+        // Add a global keyboard listener for restart (robust against focus issues)
+        const onKeyDownRestart = (e) => {
+            if (e.key.toLowerCase() === 'r') {
+                window.removeEventListener('keydown', onKeyDownRestart);
+                this.gameState.reset();
+                this.scene.restart();
+            }
+        };
+        window.addEventListener('keydown', onKeyDownRestart);
+        // Also ensure cleanup on scene shutdown to avoid double listeners
+        this.events.once('shutdown', () => {
+            window.removeEventListener('keydown', onKeyDownRestart);
+        });
 
         this.soundManager.play("splash"); // Temporary sound
     }

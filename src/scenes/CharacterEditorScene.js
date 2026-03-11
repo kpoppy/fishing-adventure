@@ -18,7 +18,7 @@ export class CharacterEditorScene extends Phaser.Scene {
         };
 
         // Tools
-        this.currentTool = "PEN"; // "PEN", "ERASER", "MAGIC_WAND", "ROD", "PAN", "EYEDROPPER", "PAINT_BUCKET", "LINE", "RECTANGLE", "CIRCLE"
+        this.currentTool = "PEN"; // "PEN", "ERASER", "MAGIC_WAND", "ROD", "PAN", "EYEDROPPER", "PAINT_BUCKET", "LINE", "RECTANGLE", "CIRCLE", "SELECT_RECT"
         this.brushSize = 1;
         this.brushShape = "SQUARE"; // "SQUARE" or "CIRCLE"
         this.brushColor = { r: 255, g: 0, b: 0, a: 255 }; // Current drawing color
@@ -31,6 +31,10 @@ export class CharacterEditorScene extends Phaser.Scene {
 
         // History (Undo)
         this.undoStack = [];
+
+        // Selection for Crop
+        this.selectionRect = null; // {x, y, w, h} in pixel space
+        this.isSelectingRect = false;
     }
 
     preload() {
@@ -199,7 +203,7 @@ export class CharacterEditorScene extends Phaser.Scene {
                     <button id="btn-line" class="tb-icon-btn" title="Line (L)">📏</button>
                     <button id="btn-rect" class="tb-icon-btn" title="Rectangle (R)">🔲</button>
                     <button id="btn-circle" class="tb-icon-btn" title="Circle (C)">⭕</button>
-
+                    <button id="btn-select" class="tb-icon-btn" title="Select Area (S)">✂️</button>
                     <button id="btn-pan" class="tb-icon-btn" title="Pan (Space/Middle Click)">✋</button>
                 </div>
             </div>
@@ -218,6 +222,7 @@ export class CharacterEditorScene extends Phaser.Scene {
                 <button id="btn-load-eraser-img" class="tb-btn" style="background:#555; text-align:center;">📥 Load Image</button>
                 <div id="eraser-tools" style="margin-top:10px;">
                      <button id="btn-eraser-auto" class="tb-btn" style="background:linear-gradient(45deg, #6200ea, #d500f9); text-align:center; font-weight:bold; border:none;">✨ Auto Erase</button>
+                     <button id="btn-crop-sel" class="tb-btn" style="background:#0088ff; text-align:center; font-weight:bold; border:none;">✂️ Crop Selected</button>
                 </div>
             </div>
             <div id="sec-world" class="tb-sec" style="display:none;">
@@ -333,6 +338,7 @@ export class CharacterEditorScene extends Phaser.Scene {
         getBtn("btn-line").onclick = () => this.setTool("LINE");
         getBtn("btn-rect").onclick = () => this.setTool("RECTANGLE");
         getBtn("btn-circle").onclick = () => this.setTool("CIRCLE");
+        getBtn("btn-select").onclick = () => this.setTool("SELECT_RECT");
         getBtn("btn-rod").onclick = () => this.setTool("ROD");
         getBtn("btn-pan").onclick = () => this.setTool("PAN");
         getBtn("btn-auto-bg").onclick = () => {
@@ -349,6 +355,9 @@ export class CharacterEditorScene extends Phaser.Scene {
         getBtn("btn-eraser-auto").onclick = () => {
             this.saveUndoState();
             this.autoRemoveBackground();
+        };
+        getBtn("btn-crop-sel").onclick = () => {
+            this.cropToSelection();
         };
 
         // World Mode (Decor) Controls
@@ -528,7 +537,7 @@ export class CharacterEditorScene extends Phaser.Scene {
     setTool(toolName) {
         this.currentTool = toolName;
 
-        const tools = ["PEN", "ERASER", "MAGIC_WAND", "EYEDROPPER", "PAINT_BUCKET", "LINE", "RECTANGLE", "CIRCLE", "ROD", "PAN"];
+        const tools = ["PEN", "ERASER", "MAGIC_WAND", "EYEDROPPER", "PAINT_BUCKET", "LINE", "RECTANGLE", "CIRCLE", "SELECT_RECT", "ROD", "PAN"];
         tools.forEach(t => {
             const btn = document.getElementById("btn-" + t.toLowerCase().replace("_", "-"));
             if (btn) {
@@ -606,6 +615,11 @@ export class CharacterEditorScene extends Phaser.Scene {
                     this.isDrawingShape = true;
                     this.shapeStartX = this.getPointerLocalX(pointer);
                     this.shapeStartY = this.getPointerLocalY(pointer);
+                } else if (this.currentTool === "SELECT_RECT") {
+                    this.isSelectingRect = true;
+                    this.selectionStartX = this.getPointerLocalX(pointer);
+                    this.selectionStartY = this.getPointerLocalY(pointer);
+                    this.selectionRect = { x: this.selectionStartX, y: this.selectionStartY, w: 0, h: 0 };
                 }
             }
         });
@@ -621,6 +635,16 @@ export class CharacterEditorScene extends Phaser.Scene {
 
             if (this.isDrawing && (this.currentTool === "PEN" || this.currentTool === "ERASER")) {
                 this.applyToolAtPointer(pointer);
+            }
+
+            if (this.isSelectingRect) {
+                const curX = this.getPointerLocalX(pointer);
+                const curY = this.getPointerLocalY(pointer);
+                const x = Math.min(this.selectionStartX, curX);
+                const y = Math.min(this.selectionStartY, curY);
+                const w = Math.abs(curX - this.selectionStartX);
+                const h = Math.abs(curY - this.selectionStartY);
+                this.selectionRect = { x, y, w: w + 1, h: h + 1 };
             }
 
             this.updateBrushPreview(pointer);
@@ -647,6 +671,11 @@ export class CharacterEditorScene extends Phaser.Scene {
                 this.isDrawing = false;
                 this.updateFrameTexture();
             }
+
+            if (this.isSelectingRect) {
+                this.isSelectingRect = false;
+            }
+
             this.isPanning = false;
         });
 
@@ -768,6 +797,29 @@ export class CharacterEditorScene extends Phaser.Scene {
                 this.drawPreviewRectangleStrict(this.shapeStartX, this.shapeStartY, endX, endY);
             } else if (this.currentTool === "CIRCLE") {
                 this.drawPreviewCircleStrict(this.shapeStartX, this.shapeStartY, endX, endY);
+            }
+            return;
+        }
+
+        // --- SELECTION PREVIEW ---
+        if ((this.isSelectingRect || this.selectionRect) && this.currentTool === "SELECT_RECT") {
+            const rect = this.selectionRect;
+            if (rect) {
+                const canvasX = this.currentFrameSprite.x - (this.currentFrameSprite.width * this.currentFrameSprite.originX * this.currentFrameSprite.scaleX);
+                const canvasY = this.currentFrameSprite.y - (this.currentFrameSprite.height * this.currentFrameSprite.originY * this.currentFrameSprite.scaleY);
+
+                const displayX = canvasX + rect.x * this.currentFrameSprite.scaleX;
+                const displayY = canvasY + rect.y * this.currentFrameSprite.scaleY;
+                const displayW = rect.w * this.currentFrameSprite.scaleX;
+                const displayH = rect.h * this.currentFrameSprite.scaleY;
+
+                this.brushPreviewGraphic.lineStyle(2 / this.cameras.main.zoom, 0x00ffff, 1);
+                this.brushPreviewGraphic.strokeRect(displayX, displayY, displayW, displayH);
+
+                // Draw dashed-like effect with second stroke
+                this.brushPreviewGraphic.lineStyle(2 / this.cameras.main.zoom, 0x000000, 0.5);
+                this.brushPreviewGraphic.setStrokeStyle(2 / this.cameras.main.zoom, 0x000000, 0.5);
+                // Graphics doesn't support dashed lines easily, so just a contrasting color
             }
             return;
         }
@@ -1432,6 +1484,41 @@ export class CharacterEditorScene extends Phaser.Scene {
         }
 
         if (!targetCanvas) this.updateFrameTexture();
+    }
+
+    cropToSelection() {
+        if (!this.selectionRect || this.selectionRect.w <= 0 || this.selectionRect.h <= 0) {
+            alert("No area selected! Use the selection tool (Scissors icon) to drag-select first.");
+            return;
+        }
+
+        this.saveUndoState();
+
+        const canvas = this.frames[this.currentFrameIndex];
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        const rect = this.selectionRect;
+
+        // Ensure selection is within canvas bounds
+        const x = Math.max(0, rect.x);
+        const y = Math.max(0, rect.y);
+        const w = Math.min(canvas.width - x, rect.w);
+        const h = Math.min(canvas.height - y, rect.h);
+
+        if (w <= 0 || h <= 0) return;
+
+        const imgData = ctx.getImageData(x, y, w, h);
+
+        // Resize canvas to selection
+        canvas.width = w;
+        canvas.height = h;
+        const newCtx = canvas.getContext("2d");
+        newCtx.putImageData(imgData, 0, 0);
+
+        // Reset selection and refresh
+        this.selectionRect = null;
+        this.updateFrameTexture();
+        this.renderCurrentFrame();
+        if (this.soundManager) this.soundManager.play("shoot");
     }
 
     updateFrameTexture() {

@@ -6,6 +6,7 @@ export class UIManager {
     constructor(scene) {
         this.scene = scene;
         this.cacheElements();
+        this.hideModal(); // Start with clean state
         this.updateLabels(); // 초기 레이블 설정
     }
 
@@ -54,6 +55,12 @@ export class UIManager {
         this.worldMapUI = document.getElementById("world-map-ui");
         this.worldMapPlayerIcon = document.getElementById("map-player-icon");
         this.minimapDot = document.getElementById("player-dot");
+
+        // Death Overlay
+        this.deathOverlay = document.getElementById("death-overlay");
+        this.deathTitle = document.getElementById("death-title");
+        this.deathReason = document.getElementById("death-reason");
+        this.deathRestartHint = document.getElementById("death-restart-hint");
 
         this.shopUI = document.getElementById("shop-ui");
         this.shopSellList = document.getElementById("shop-sell-list");
@@ -140,6 +147,9 @@ export class UIManager {
             const el = document.getElementById(`h-etc-${i}`);
             if (el) el.textContent = t(`h_etc_${i}`);
         }
+
+        if (this.deathTitle) this.deathTitle.textContent = t("game_over");
+        if (this.deathRestartHint) this.deathRestartHint.textContent = t("press_r_restart");
     }
 
     showDialogue(title, desc, buttons = []) {
@@ -233,6 +243,7 @@ export class UIManager {
         if (this.shopUI) this.shopUI.style.display = "none";
         if (this.vnDialogueOverlay) this.vnDialogueOverlay.style.display = "none";
         if (this.helpUI) this.helpUI.style.display = "none";
+        if (this.deathOverlay) this.deathOverlay.style.display = "none";
 
         // 입력 충돌 방지를 위한 타임스탬프 기록
         if (this.scene && this.scene.time) {
@@ -631,6 +642,20 @@ export class UIManager {
         this.modalDesc.textContent = `Time: ${timeSec.toFixed(1)}s | Kills: ${kills}`;
     }
 
+    showActualGameOver(reasonKey) {
+        if (!this.deathOverlay) return;
+        const t = (k) => languageManager.t(k);
+
+        this.deathOverlay.style.display = "flex";
+        if (this.deathReason) {
+            this.deathReason.textContent = t(reasonKey);
+        }
+
+        // Hide other UIs
+        this.hideModal();
+        this.setHUDVisible(false);
+    }
+
     update(state) {
         if (!state) return;
 
@@ -638,7 +663,9 @@ export class UIManager {
         if (this.timeEl && state.gameTime) {
             const h = String(state.gameTime.hours).padStart(2, '0');
             const m = String(state.gameTime.minutes).padStart(2, '0');
-            this.timeEl.textContent = `${h}:${m}`;
+            const d = state.gameTime.day || 1;
+            const dayLabel = languageManager.t("day");
+            this.timeEl.textContent = `${d}${dayLabel} ${h}:${m}`;
         }
 
         // Depth Meter

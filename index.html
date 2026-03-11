@@ -190,6 +190,42 @@
       z-index: 10000;
       pointer-events: auto;
     }
+
+    /* Actual Game Over Overlay (Full Screen) */
+    #death-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 1);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 999999;
+      pointer-events: auto;
+      color: #ff3333;
+      text-align: center;
+      font-family: 'Press Start 2P', cursive;
+    }
+
+    #death-overlay h1 {
+      font-size: 64px;
+      margin-bottom: 20px;
+      text-shadow: 0 0 20px #ff0000;
+    }
+
+    #death-overlay p {
+      color: #ffffff;
+      font-size: 18px;
+      margin-bottom: 30px;
+    }
+
+    #death-overlay .restart-hint {
+      color: #aaaaaa;
+      font-size: 14px;
+    }
   </style>
   <link rel="stylesheet" href="./styles.css" />
 </head>
@@ -366,6 +402,13 @@
       <div id="modal-buttons" style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
         <!-- Buttons injected via JS -->
       </div>
+    </div>
+
+    <!-- Death/Game Over Overlay -->
+    <div id="death-overlay">
+      <h1 id="death-title">GAME OVER</h1>
+      <p id="death-reason">Reason description goes here.</p>
+      <div class="restart-hint" id="death-restart-hint">[ R ] 키를 눌러 재시작</div>
     </div>
 
     <!-- VN Dialogue UI (General Purpose) -->
